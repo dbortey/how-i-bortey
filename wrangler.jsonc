@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "how-i-bortey",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "how-i-bortey-db",
+      "database_id": "a4116e12-2e90-4462-be3d-2ec3d8fdd70a",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "kv_namespaces": [
+    { "binding": "SESSIONS", "id": "c9d802cea86b4a74bfbe6a2e252a1095" }
+  ],
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "how-i-bortey-media" }
+  ]
+}

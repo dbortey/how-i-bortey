@@ -12,6 +12,13 @@ dist/
 # Env
 .env
 .env*.local
+.dev.vars
+
+# Wrangler
+.wrangler/
+
+# Test output
+coverage/
 
 # Logs
 *.log

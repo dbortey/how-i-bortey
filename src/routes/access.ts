@@ -27,7 +27,9 @@ accessRoutes.post("/tokens", async (c) => {
   const body = await c.req
     .json<{ label?: string; ttlHours?: number }>()
     .catch(() => ({} as { label?: string; ttlHours?: number }));
-  const ttl = Math.min(Math.max(Math.floor(body.ttlHours ?? 12), 1), 168);
+  const raw =
+    typeof body.ttlHours === "number" && Number.isFinite(body.ttlHours) ? body.ttlHours : 12;
+  const ttl = Math.min(Math.max(Math.floor(raw), 1), 168);
   const label =
     typeof body.label === "string" && body.label.trim() ? body.label.trim() : "mcp client";
   const created = await createSession(c.env.DB, c.get("userId"), label, ttl);

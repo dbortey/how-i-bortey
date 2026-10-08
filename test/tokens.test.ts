@@ -33,6 +33,19 @@ describe("mcp tokens", () => {
     expect(session?.id).toBe(body.id);
   });
 
+  it("falls back to the default TTL for a non-numeric ttlHours", async () => {
+    const cookie = await ownerCookie();
+    const res = await SELF.fetch("https://example.com/access/tokens", {
+      method: "POST",
+      headers: { cookie, "content-type": "application/json" },
+      body: JSON.stringify({ ttlHours: "abc" }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json<{ token: string; expiresAt: string }>();
+    expect(typeof body.expiresAt).toBe("string");
+    expect(Number.isNaN(Date.parse(body.expiresAt))).toBe(false);
+  });
+
   it("resolves a bearer token from a request header", async () => {
     const user = await upsertUserByEmail(env.DB, "owner@example.com");
     const { token, id } = await createSession(env.DB, user.id, "cli", 2);

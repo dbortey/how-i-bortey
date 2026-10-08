@@ -55,3 +55,34 @@ export function useFileEntry() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["entries"] }),
   });
 }
+
+export function useEntry(id: string) {
+  return useQuery({ queryKey: ["entry", id], queryFn: () => getEntry(id) });
+}
+
+export function useUpdateEntry(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (patch: Record<string, unknown>) =>
+      api<Entry>(`/entries/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["entry", id] }); qc.invalidateQueries({ queryKey: ["entries"] }); },
+  });
+}
+
+export function useAddLink(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (link: { url: string; title?: string; kind?: string }) =>
+      api(`/entries/${id}/links`, { method: "POST", body: JSON.stringify(link) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["entry", id] }),
+  });
+}
+
+export function useAddRelation(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (rel: { to_entry: string; type: string; verdict?: string; reason?: string }) =>
+      api(`/entries/${id}/relations`, { method: "POST", body: JSON.stringify(rel) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["entry", id] }),
+  });
+}

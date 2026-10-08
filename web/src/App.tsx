@@ -4,6 +4,7 @@ import { Login } from "./pages/Login";
 import { Library } from "./pages/Library";
 import { Capture } from "./pages/Capture";
 import { Inbox } from "./pages/Inbox";
+import { EntryEdit } from "./pages/EntryEdit";
 import { useSession } from "./lib/query";
 
 function Stub({ name }: { name: string }) {
@@ -19,7 +20,7 @@ export function App() {
       <Route element={<AppShell />}>
         <Route path="/" element={<Library />} />
         <Route path="/library" element={<Library />} />
-        <Route path="/library/:id" element={<Stub name="Entry" />} />
+        <Route path="/library/:id" element={<EntryEdit />} />
         <Route path="/capture" element={<Capture />} />
         <Route path="/inbox" element={<Inbox />} />
         <Route path="/access" element={<Stub name="Access" />} />

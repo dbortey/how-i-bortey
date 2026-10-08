@@ -4,8 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "deploy": "npm run build:web && wrangler deploy",
     "test": "vitest run",
+    "test:web": "npm --prefix web run test",
+    "build:web": "npm --prefix web run build",
     "test:watch": "vitest",
     "types": "wrangler types",
     "db:migrate:local": "wrangler d1 migrations apply how-i-bortey-db --local",

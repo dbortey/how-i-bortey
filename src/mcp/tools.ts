@@ -1,4 +1,9 @@
 import type { EntryKind } from "../db/types";
+import { getEntry } from "../db/entries";
+import { searchEntries } from "../db/search";
+import { getRelations } from "../db/relations";
+import { getLinks } from "../db/links";
+import { listTags } from "../db/tags";
 
 export interface ToolDefinition {
   name: string;
@@ -79,10 +84,51 @@ export const TOOLS: ToolDefinition[] = [
   },
 ];
 
-export async function callTool(
-  _db: D1Database,
-  name: string,
-  _args: Record<string, unknown>,
+async function searchLibrary(
+  db: D1Database,
+  args: Record<string, unknown>,
 ): Promise<ToolResult> {
-  return fail(`tool not implemented: ${name}`);
+  const query = typeof args.query === "string" ? args.query : "";
+  if (!query.trim()) return fail("query is required");
+  const kind = KINDS.includes(args.kind as EntryKind) ? (args.kind as EntryKind) : undefined;
+  const tags = Array.isArray(args.tags)
+    ? args.tags.filter((t): t is string => typeof t === "string")
+    : undefined;
+  const limit =
+    typeof args.limit === "number" && args.limit > 0 ? Math.min(args.limit, 50) : 10;
+  const entries = await searchEntries(db, query, { kind, tags, limit });
+  const enriched = await Promise.all(
+    entries.map(async (e) => ({ ...e, relations: await getRelations(db, e.id) })),
+  );
+  return text(enriched);
+}
+
+async function getEntryTool(
+  db: D1Database,
+  args: Record<string, unknown>,
+): Promise<ToolResult> {
+  const id = typeof args.id === "string" ? args.id : "";
+  if (!id) return fail("id is required");
+  const entry = await getEntry(db, id);
+  if (!entry) return fail(`no entry with id ${id}`);
+  return text({
+    ...entry,
+    relations: await getRelations(db, entry.id),
+    links: await getLinks(db, entry.id),
+  });
+}
+
+export async function callTool(
+  db: D1Database,
+  name: string,
+  args: Record<string, unknown>,
+): Promise<ToolResult> {
+  try {
+    if (name === "search_library") return await searchLibrary(db, args);
+    if (name === "get_entry") return await getEntryTool(db, args);
+    if (name === "list_tags") return text(await listTags(db));
+    return fail(`unknown tool: ${name}`);
+  } catch (e) {
+    return fail(e instanceof Error ? e.message : "tool error");
+  }
 }

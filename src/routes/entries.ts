@@ -33,12 +33,12 @@ function invalidTags(tags: unknown): boolean {
 
 entryRoutes.get("/", async (c) => {
   const q = c.req.query("q");
-  if (q) {
-    const results = await searchEntries(c.env.DB, q, { limit: 50 });
-    return c.json(results);
-  }
   const status = c.req.query("status") as EntryStatus | undefined;
   const kind = c.req.query("kind") as EntryKind | undefined;
+  if (q) {
+    const results = await searchEntries(c.env.DB, q, { status, kind, limit: 50 });
+    return c.json(results);
+  }
   return c.json(await listEntries(c.env.DB, { status, kind }));
 });
 

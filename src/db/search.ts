@@ -1,4 +1,4 @@
-import type { Entry, EntryKind } from "./types";
+import type { Entry, EntryKind, EntryStatus } from "./types";
 import { getEntry } from "./entries";
 
 export function toFtsQuery(raw: string): string {
@@ -13,7 +13,7 @@ export function toFtsQuery(raw: string): string {
 export async function searchEntries(
   db: D1Database,
   query: string,
-  opts: { kind?: EntryKind; tags?: string[]; limit?: number } = {},
+  opts: { kind?: EntryKind; status?: EntryStatus; tags?: string[]; limit?: number } = {},
 ): Promise<Entry[]> {
   const fts = toFtsQuery(query);
   if (!fts) return [];
@@ -31,6 +31,7 @@ export async function searchEntries(
     const entry = await getEntry(db, r.entry_id);
     if (!entry) continue;
     if (opts.kind && entry.kind !== opts.kind) continue;
+    if (opts.status && entry.status !== opts.status) continue;
     if (opts.tags?.length && !opts.tags.every((t) => entry.tags.includes(t))) continue;
     entries.push(entry);
     if (entries.length >= limit) break;

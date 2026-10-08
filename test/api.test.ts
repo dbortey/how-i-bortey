@@ -80,6 +80,24 @@ describe("entry API", () => {
     const results = await res.json<Array<{ title: string }>>();
     expect(results.map((e) => e.title)).toEqual(["Capture One"]);
   });
+
+  it("applies the status filter to ?q= search", async () => {
+    const cookie = await authCookie();
+    const create = (title: string, status: string) =>
+      SELF.fetch("https://example.com/entries", {
+        method: "POST",
+        headers: { cookie, "content-type": "application/json" },
+        body: JSON.stringify({ title, body: "photo editor", status }),
+      });
+    await create("Filed One", "filed");
+    await create("Inbox One", "inbox");
+
+    const res = await SELF.fetch("https://example.com/entries?q=photo&status=filed", {
+      headers: { cookie },
+    });
+    const results = await res.json<Array<{ title: string; status: string }>>();
+    expect(results.map((e) => e.title)).toEqual(["Filed One"]);
+  });
 });
 
 describe("auth flow", () => {

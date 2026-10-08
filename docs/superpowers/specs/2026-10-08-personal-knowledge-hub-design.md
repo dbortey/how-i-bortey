@@ -29,10 +29,12 @@ using, anywhere, on any machine.
   every previously connected machine off on demand.
 - **Upgradeable.** Starts focused on tool/choice memory and can grow to
   workflows, decisions and general notes without a schema rewrite.
+- **Free at personal scale.** Runs entirely within Cloudflare's free tiers.
 
 ## 3. Non-goals (v1)
 
-- Semantic/vector search (schema is prepared for it, but v1 is tags + full-text).
+- Semantic/vector search (schema is prepared for it via Vectorize, but v1 is
+  tags + full-text).
 - Folder-drop sync from the local filesystem.
 - Link scraping / content archiving / link-rot snapshots.
 - Multi-user, sharing, or team features.
@@ -45,105 +47,107 @@ using, anywhere, on any machine.
 | Area | Decision |
 | --- | --- |
 | Users | Single user |
-| Hosting | Vercel (web app, API, MCP endpoint, Telegram webhook) |
-| Database | Render Postgres |
+| Platform | Cloudflare throughout (Workers, D1, R2, KV, Vectorize, Cron) |
+| Runtime | Cloudflare Workers (Hono) for API + `/mcp` + Telegram webhook |
+| Database | Cloudflare D1 (SQLite) |
+| Web UI | Vite + React + Tailwind + shadcn/ui (static assets) |
 | Access model | Remote MCP over HTTP + web fallback; bearer-token auth |
 | Logout guarantee | Kill switch: revoke on demand; short-lived MCP tokens |
 | Audience scope | Tool/choice memory now, room to grow |
-| Retrieval | Tags + full-text now; `pgvector` later |
+| Retrieval | SQLite FTS5 now; Cloudflare Vectorize later |
 | Capture (v1) | Web + Telegram; folder-sync and link archiving later |
-| UI | Next.js App Router + Tailwind + shadcn/ui |
-| Media | Cloudflare R2 (with Vercel Blob as the low-friction alternative) |
-| Mirror | Scheduled export of entries to a private git repo |
+| Media | Cloudflare R2 |
+| Sessions/tokens | D1 `sessions` table |
+| Mirror | Cloudflare Cron Trigger → private git repo |
 
 ## 5. Architecture
 
 ```
-                    ┌──────────────────────────── Vercel ────────────────────────────┐
-                    │                                                                 │
-  Owner ──browser──▶│  Web app (Next.js + shadcn/ui)                                  │
-                    │        │                                                        │
-  Telegram ─webhook▶│  API route handlers ──▶ MCP endpoint (/mcp)                     │
-                    │        │                       ▲                                │
-                    └────────┼───────────────────────┼────────────────────────────────┘
-                             │                       │ bearer token
-                             ▼                       │
-                    ┌────────────────┐      ┌────────┴─────────┐
-                    │ Object storage │      │  AI client(s)    │
-                    │  (R2 / Blob)   │      │ (Claude, GPT,    │
-                    └────────────────┘      │  Cursor, ...)    │
-                             │              └──────────────────┘
-                             ▼
-                    ┌────────────────┐      ┌──────────────────┐
-                    │ Render Postgres│◀─────│  Markdown mirror │
-                    │  (source of    │      │  cron → git repo │
-                    │   truth)       │      └──────────────────┘
-                    └────────────────┘
+                         ┌────────────── Cloudflare ──────────────┐
+                         │                                        │
+  Owner ──browser──▶  Static UI ──┐                               │
+                    (Vite/React)  │                               │
+                                  ▼                               │
+  Telegram ─webhook────────▶  Worker (Hono)  ──▶ D1 (SQLite)      │
+                                  │   │   │                       │
+                          ┌───────┘   │   └───────┐               │
+                          ▼           ▼           ▼               │
+                   MCP (/mcp)      R2 (media)   KV/D1 (sessions)  │
+                          ▲                       │               │
+                          │                       ▼               │
+                   AI clients            Cron → git mirror        │
+                   (Claude, GPT,         Vectorize (later)        │
+                    Cursor, ...)                                  │
+                         └────────────────────────────────────────┘
 ```
 
 **Components**
 
-1. **Web app** (Next.js App Router on Vercel). Log in; browse, search, edit and
-   capture entries; manage alternatives and ratings; manage access (view active
-   tokens/connected devices, trigger "Log out everywhere").
-2. **API layer** (Next.js route handlers). Serves the web app, the MCP endpoint
-   and the Telegram webhook.
+1. **Static web UI** (Vite + React + Tailwind + shadcn/ui), served as Cloudflare
+   static assets. Log in; browse, search, edit, capture; manage alternatives;
+   manage access (view connected devices/tokens, "Log out everywhere").
+2. **Worker API** (Hono) — single source of backend truth. Serves the UI, the
+   MCP endpoint, and the Telegram webhook.
 3. **MCP endpoint** (`/mcp`, remote HTTP transport). Bearer-token auth tied to
    the owner account. Tools (see §8).
-4. **Telegram bot** (webhook → API route). Text, links and photos become entries
-   tagged `inbox` for later tidying on the web.
-5. **Postgres** (Render). Source of truth. See §6.
-6. **Object storage** (Cloudflare R2, or Vercel Blob). Images only.
-7. **Markdown mirror** (scheduled job). Exports entries to a private git repo.
+4. **Telegram bot** (webhook → Worker route). Text, links and photos become
+   entries tagged `inbox` for later tidying on the web.
+5. **D1 (SQLite)** — source of truth. See §6.
+6. **R2** — images only.
+7. **KV / D1 sessions** — active tokens and device list.
+8. **Cron Trigger** — scheduled Markdown mirror to a private git repo.
+9. **Vectorize** (later) — semantic search when needed.
 
 **Data flow**
 
-- *Capture:* web or Telegram → API → Postgres (status `inbox` or `filed`).
+- *Capture:* web or Telegram → Worker → D1 (status `inbox` or `filed`).
 - *Retrieval:* AI reads the portable instruction file → calls `search_library`
-  → API verifies token → Postgres full-text → returns entries, ratings of
-  alternatives, and links.
-- *Kill switch:* "Log out everywhere" deletes session/token rows → every MCP
-  call fails instantly; a machine must re-authenticate from the site.
+  → Worker verifies token → FTS5 search → entries, ratings of alternatives,
+  and links.
+- *Kill switch:* "Log out everywhere" deletes `sessions` rows → every MCP call
+  fails instantly; a machine must re-authenticate from the site.
 
 **Platform constraints to respect**
 
-- **Serverless + Postgres connection limits.** Vercel functions are per-request;
-  Render Postgres has a finite connection limit. Use a single pooled client
-  reused across invocations, keep queries short, cap concurrency, and use
-  Render's connection pooler for external connections if needed.
+- **D1 is SQLite.** No `tsvector`/`pgvector`; use FTS5 for search and Vectorize
+  for semantics later. JSON fields are TEXT using SQLite JSON functions. UUIDs
+  are generated in the Worker.
+- **D1 write throughput** is modest; batch writes and keep per-request writes
+  small. Reads scale better than writes.
+- **Workers CPU limits** (free tier: 10ms CPU/request soft; keep handlers lean,
+  do heavy work in queues/cron if it ever grows).
 - **Telegram webhook must ack fast.** Always return 200 quickly; dedupe by
   `update_id`; do heavier work after ack.
-- **`pgvector` later** = enable the extension on Render Postgres when needed; no
-  schema change required beyond adding a column/index.
-- **Render Postgres free tier is time-limited** (~30 days); treat this as a
-  paid (~$7/mo) datastore.
-- **stdio-only MCP clients** cannot reach a remote HTTP endpoint directly and
-  need a small `mcp-remote` bridge. Most clients now support remote MCP.
+- **Cloudflare free tiers:** Workers ~100k req/day; D1 ~5GB and ~5M row-reads /
+  100k row-writes per day; R2 10GB with no egress fees. Ample for personal use.
 
 ## 6. Data model
 
 Single flexible core: everything is an **entry**; relationships between entries
-encode "I chose X over Y."
+encode "I chose X over Y." All timestamps ISO-8601 TEXT; all ids UUID TEXT.
 
 **entries**
-- `id` (uuid), `title` (text)
+- `id` TEXT PK, `title` TEXT
 - `kind` (`tool` | `workflow` | `decision` | `note`)
 - `status` (`inbox` | `filed` | `archived`)
 - `verdict` (`use` | `avoid` | `watching`)
-- `body` (markdown text)
-- `source` (`web` | `telegram`), `source_url` (text, nullable)
-- `attributes` (jsonb) — kind-specific fields, e.g. for `tool`:
+- `body` TEXT (markdown)
+- `source` (`web` | `telegram`), `source_url` TEXT NULL
+- `attributes` TEXT (JSON) — kind-specific fields, e.g. for `tool`:
   `pricing_model` (`subscription` | `one-time` | `freemium` | `open-source`),
   `platforms` (win/mac/linux/web/ios/android), `my_rating` (1–5),
   `website`, `why_i_chose_it`, `gotchas`
-- `search_vector` (tsvector over title + body + tag names, GIN-indexed)
 - `created_at`, `updated_at`
 
+**entries_fts** — FTS5 virtual table (`title`, `body`, `tags`, `entry_id`
+UNINDEXED), kept in sync with `entries` and `entry_tags` by triggers. Backs
+`search_library`.
+
 **entry_relations** — encodes choices without duplicating tools
-- `from_entry` (fk → entries), `to_entry` (fk → entries)
+- `from_entry`, `to_entry` (FK → entries)
 - `type` (`alternative_of` | `supersedes` | `pairs_with`)
 - `verdict` (`chosen` | `considered` | `rejected` | `watching`)
-- `reason` (text)
+- `reason` TEXT
 
 **tags**
 - `id`, `name`, `kind` (`domain` | `task` | `platform` | `pricing`)
@@ -154,10 +158,10 @@ encode "I chose X over Y."
 **links**
 - `id`, `entry_id`, `url`, `title`
 - `kind` (`tutorial` | `docs` | `social` | `video` | `article`)
-- `note` (text), `snapshot` (nullable ref — reserved for link-rot archiving)
+- `note` TEXT, `snapshot` TEXT NULL (reserved for link-rot archiving)
 
 **media**
-- `id`, `entry_id` (nullable), `storage_key`, `mime`, `width`, `height`, `caption`
+- `id`, `entry_id` NULL, `storage_key`, `mime`, `width`, `height`, `caption`
 
 **users**
 - `id`, `email`, `created_at`
@@ -166,26 +170,28 @@ encode "I chose X over Y."
 - `id`, `user_id`, `token_hash`, `device_label`
 - `created_at`, `last_used_at`, `expires_at`, `revoked_at`
 
-**Rationale:** tool-specific fields live in `attributes` jsonb so kinds can
-diverge later without migrations; `entry_relations` lets the same tool appear in
-many comparisons without duplication and lets "editing photos" retrieve the
-chosen tool, its reasoning, and its alternatives together.
+**Rationale:** tool-specific fields live in a JSON `attributes` column so kinds
+can diverge later without migrations; `entry_relations` lets the same tool
+appear in many comparisons without duplication and lets "editing photos"
+retrieve the chosen tool, its reasoning, and its alternatives together.
 
 ## 7. Web UI
 
-- **Stack:** Next.js App Router + Tailwind CSS + shadcn/ui (components copied
-  into the repo). TanStack Table for the entries list; `react-hook-form` + `zod`
-  for entry forms; shadcn `cmdk` command palette for search; `sonner` toasts;
-  `next-themes` dark mode; Tiptap (or markdown textarea + preview) for bodies.
+- **Stack:** Vite + React + Tailwind CSS + shadcn/ui (components copied into the
+  repo). TanStack Table for the entries list; `react-hook-form` + `zod` for
+  entry forms; shadcn `cmdk` command palette for search; `sonner` toasts;
+  `next-themes` (or a small theme provider) for dark mode; Tiptap or a markdown
+  textarea + preview for bodies.
 - **Screens (v1):** Login; Library (list + filters + full-text search); Entry
   detail/edit (body, tags, links, alternatives, rating, pricing/platforms);
   Capture (quick add); Inbox (tidy Telegram captures); Access (connected
   devices/tokens + "Log out everywhere").
+- Served as static assets from Cloudflare; talks to the Worker API over HTTPS.
 
 ## 8. MCP endpoint and tools
 
-- **Transport:** remote HTTP MCP at `/mcp`.
-- **Auth:** bearer token (`session` row), short-lived (hours) with refresh from
+- **Transport:** remote HTTP MCP at `/mcp` (Worker route).
+- **Auth:** bearer token (`sessions` row), short-lived (hours) with refresh from
   the site. Revoked/expired → 401.
 - **Tools:**
   - `search_library(query, tags?, kind?)` → matching entries + related
@@ -215,22 +221,23 @@ CLI) plus the `mcp-remote` bridge snippet for stdio-only clients.
 
 ## 10. Error handling
 
-- Validate at the edge with `zod`; typed error envelope for the web UI.
+- Validate at the edge with `zod`; typed error envelope for the UI.
 - Telegram webhook: always 200 fast; dedupe by `update_id`; process after ack.
 - MCP: structured, human-readable errors; never expose internals.
-- Postgres: cap concurrency, retry with backoff, catch constraint violations.
+- D1: use prepared statements, batch related writes, catch constraint
+  violations; no connection-pool concerns (D1 is request-scoped).
 - Media upload failure: save the entry anyway; flag media for retry; never lose
   the text.
 - Kill switch: token checked on every MCP call; revoked → immediate 401.
-- Mirror job: a failed git push logs/alerts but never blocks; the DB remains the
-  source of truth.
+- Mirror job: a failed GitHub commit logs/alerts but never blocks; D1 remains
+  the source of truth.
 
 ## 11. Testing
 
-- **Unit (Vitest):** tag/search normalization, tsvector query builder,
+- **Unit (Vitest):** tag/search normalization, FTS5 query builder,
   entry↔relation mapping, token hashing + expiry.
-- **Integration:** API routes against a scratch Postgres — capture → store →
-  search round trip; auth and revocation.
+- **Worker integration (`@cloudflare/vitest-pool-workers`):** routes against a
+  local D1 — capture → store → search round trip; auth and revocation.
 - **E2E (Playwright):** log in, create an entry, search finds it, kill switch
   revokes a simulated token.
 - **MCP contract tests:** valid vs expired token against `/mcp`.
@@ -238,28 +245,31 @@ CLI) plus the `mcp-remote` bridge snippet for stdio-only clients.
 
 ## 12. Auth
 
-- **Recommended:** magic-link email via Auth.js + Resend (single user, least
-  code, no password to leak).
+- **Recommended:** magic-link email implemented directly in the Worker
+  (send via Resend, store a one-time token in D1, verify on click). Keeps the
+  stack uniform and avoids pulling a heavy auth framework onto Workers.
 - **Alternative:** passphrase + signed session cookie.
 - Both back onto the `users` + `sessions` tables so the kill switch is uniform.
 
-## 13. Hosting & environments
+## 13. Hosting, bindings & secrets
 
-- **Vercel:** web app, API, MCP, Telegram webhook, cron (mirror).
-- **Render:** Postgres (and, only if needed later, a small Web Service to host
-  MCP + bot with long-lived DB connections).
-- **Secrets (Vercel env):** `DATABASE_URL`, auth secret, `TELEGRAM_BOT_TOKEN`,
-  `TELEGRAM_WEBHOOK_SECRET`, `R2_*` (or Blob token), `MIRROR_REPO_TOKEN`.
-- **Cost note:** Vercel hobby is sufficient; Render Postgres becomes ~$7/mo
-  after the free window.
+- **Cloudflare Worker** `how-i-bortey` — API + `/mcp` + Telegram webhook + Cron.
+- **Bindings:** `DB` (D1), `MEDIA` (R2), `SESSIONS` (KV, optional), `VECTORIZE`
+  (later).
+- **Static UI** — Cloudflare Pages/Workers static assets.
+- **Secrets (`wrangler secret put`):** `TELEGRAM_BOT_TOKEN`,
+  `TELEGRAM_WEBHOOK_SECRET`, `RESEND_API_KEY`, `AUTH_SECRET`,
+  `GITHUB_MIRROR_TOKEN`.
+- **Config:** `wrangler.toml`/`wrangler.jsonc` for bindings and Cron schedule.
+- **Cost:** free at personal scale across all Cloudflare products.
 
 ## 14. Open questions (resolve during implementation)
 
-1. Media host: Cloudflare R2 (cheaper egress) vs Vercel Blob (fewer moving
-   parts). Default: Vercel Blob for v1.
-2. Mirror target: `/library` folder in this repo vs a separate private repo.
+1. Mirror target: `/library` folder in this repo vs a separate private repo.
    Default: separate private repo.
-3. Which AI clients the owner uses day-to-day, to prioritise the connect sheet.
+2. Which AI clients the owner uses day-to-day, to prioritise the connect sheet.
+3. Whether the UI ships as Cloudflare Pages or as Worker static assets.
+   Default: Worker static assets (one deploy).
 
 ## 15. Next step
 

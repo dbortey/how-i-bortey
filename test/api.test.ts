@@ -149,6 +149,22 @@ describe("auth flow", () => {
     expect(second.status).toBe(400);
   });
 
+  it("does not stack pending tokens for the same email", async () => {
+    const first = await requestLink("owner@example.com");
+    const firstBody = await first.json<{ ok: boolean; devLink?: string }>();
+    expect(firstBody.devLink).toBeTruthy();
+
+    const second = await requestLink("owner@example.com");
+    const secondBody = await second.json<{ ok: boolean; devLink?: string }>();
+    expect(secondBody.ok).toBe(true);
+    expect(secondBody.devLink).toBeUndefined();
+
+    const { results } = await env.DB
+      .prepare("SELECT COUNT(*) AS n FROM magic_tokens")
+      .all<{ n: number }>();
+    expect(results[0].n).toBe(1);
+  });
+
   it("rejects an invalid magic token on POST", async () => {
     const res = await SELF.fetch("https://example.com/auth/verify", {
       method: "POST",

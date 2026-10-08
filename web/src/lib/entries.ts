@@ -13,10 +13,15 @@ export interface Entry {
   tags: string[];
 }
 
-export function useEntries(query: string) {
+export function useEntries(query: string, filters: { status?: string; kind?: string } = {}) {
+  const params = new URLSearchParams();
+  if (query) params.set("q", query);
+  if (filters.status) params.set("status", filters.status);
+  if (filters.kind) params.set("kind", filters.kind);
+  const qs = params.toString();
   return useQuery({
-    queryKey: ["entries", query],
-    queryFn: () => api<Entry[]>(query ? `/entries?q=${encodeURIComponent(query)}` : "/entries"),
+    queryKey: ["entries", query, filters],
+    queryFn: () => api<Entry[]>(qs ? `/entries?${qs}` : "/entries"),
   });
 }
 

@@ -34,4 +34,15 @@ describe("Library", () => {
     expect(await screen.findByText(/no entries match/i)).toBeInTheDocument();
     expect(spy).toHaveBeenCalledWith(expect.stringContaining("/entries?q=photo"));
   });
+
+  it("filters by status", async () => {
+    const spy = vi.spyOn(api, "api").mockResolvedValue([]);
+    renderLibrary();
+    await screen.findByText(/your library is empty/i);
+
+    await userEvent.click(screen.getByRole("combobox", { name: /status/i }));
+    await userEvent.click(await screen.findByRole("option", { name: /^filed$/i }));
+
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining("status=filed"));
+  });
 });

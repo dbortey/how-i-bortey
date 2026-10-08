@@ -15,6 +15,21 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await res.json()) as T;
 }
 
+export interface SessionInfo {
+  id: string;
+  device_label: string | null;
+  created_at: string;
+  last_used_at: string | null;
+  expires_at: string;
+}
+export const listSessions = () => api<SessionInfo[]>("/access/sessions");
+export const mintToken = (label: string) =>
+  api<{ token: string; id: string; expiresAt: string }>("/access/tokens", {
+    method: "POST",
+    body: JSON.stringify({ label }),
+  });
+export const revokeAll = () => api<{ revoked: number }>("/access/revoke-all", { method: "POST" });
+
 export const getMe = () => api<{ userId: string }>("/me");
 export const requestMagicLink = (email: string) =>
   api<{ ok: boolean; devLink?: string }>("/auth/request", {

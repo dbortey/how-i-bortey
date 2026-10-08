@@ -15,11 +15,17 @@ export function Access() {
   const mint = useMutation({
     mutationFn: () => mintToken(label),
     onSuccess: (res) => { setMinted(res.token); toast.success("Token created. Copy it now — it is shown once."); },
+    onError: () => toast.error("Could not create a token."),
   });
 
   async function killSwitch() {
     if (!confirm("Revoke every connected device, including this one?")) return;
-    await revokeAll();
+    try {
+      await revokeAll();
+    } catch {
+      toast.error("Could not revoke devices. Nothing was signed out.");
+      return;
+    }
     toast.success("All devices revoked. Signing you out.");
     await logout().catch(() => {});
     queryClient.clear();

@@ -24,9 +24,10 @@ accessRoutes.post("/revoke-all", async (c) => {
 });
 
 accessRoutes.post("/tokens", async (c) => {
-  const body = await c.req
-    .json<{ label?: string; ttlHours?: number }>()
-    .catch(() => ({} as { label?: string; ttlHours?: number }));
+  const body =
+    (await c.req
+      .json<{ label?: string; ttlHours?: number } | null>()
+      .catch(() => null)) ?? {};
   const raw =
     typeof body.ttlHours === "number" && Number.isFinite(body.ttlHours) ? body.ttlHours : 12;
   const ttl = Math.min(Math.max(Math.floor(raw), 1), 168);

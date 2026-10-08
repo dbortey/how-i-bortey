@@ -46,6 +46,19 @@ describe("mcp tokens", () => {
     expect(Number.isNaN(Date.parse(body.expiresAt))).toBe(false);
   });
 
+  it("tolerates a null JSON body", async () => {
+    const cookie = await ownerCookie();
+    const res = await SELF.fetch("https://example.com/access/tokens", {
+      method: "POST",
+      headers: { cookie, "content-type": "application/json" },
+      body: "null",
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json<{ token: string; expiresAt: string }>();
+    expect(typeof body.expiresAt).toBe("string");
+    expect(Number.isNaN(Date.parse(body.expiresAt))).toBe(false);
+  });
+
   it("resolves a bearer token from a request header", async () => {
     const user = await upsertUserByEmail(env.DB, "owner@example.com");
     const { token, id } = await createSession(env.DB, user.id, "cli", 2);

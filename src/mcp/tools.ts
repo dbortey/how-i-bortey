@@ -1,5 +1,5 @@
 import type { EntryKind } from "../db/types";
-import { getEntry } from "../db/entries";
+import { createEntry, getEntry } from "../db/entries";
 import { searchEntries } from "../db/search";
 import { getRelations } from "../db/relations";
 import { getLinks } from "../db/links";
@@ -118,6 +118,34 @@ async function getEntryTool(
   });
 }
 
+async function addEntryTool(
+  db: D1Database,
+  args: Record<string, unknown>,
+): Promise<ToolResult> {
+  const title = typeof args.title === "string" ? args.title.trim() : "";
+  if (!title) return fail("title is required");
+  const kind = KINDS.includes(args.kind as EntryKind) ? (args.kind as EntryKind) : undefined;
+  const body = typeof args.body === "string" ? args.body : undefined;
+  const tags = Array.isArray(args.tags)
+    ? args.tags.filter((t): t is string => typeof t === "string")
+    : undefined;
+  const attributes =
+    args.attributes && typeof args.attributes === "object" && !Array.isArray(args.attributes)
+      ? (args.attributes as Record<string, unknown>)
+      : undefined;
+  const source_url = typeof args.source_url === "string" ? args.source_url : undefined;
+  const entry = await createEntry(db, {
+    title,
+    kind,
+    body,
+    tags,
+    attributes,
+    source_url,
+    source: "mcp",
+  });
+  return text(entry);
+}
+
 export async function callTool(
   db: D1Database,
   name: string,
@@ -126,6 +154,7 @@ export async function callTool(
   try {
     if (name === "search_library") return await searchLibrary(db, args);
     if (name === "get_entry") return await getEntryTool(db, args);
+    if (name === "add_entry") return await addEntryTool(db, args);
     if (name === "list_tags") return text(await listTags(db));
     return fail(`unknown tool: ${name}`);
   } catch (e) {

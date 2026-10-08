@@ -13,7 +13,8 @@ export default defineConfig(async () => {
         miniflare: {
           bindings: {
             TEST_MIGRATIONS: migrations,
-            APP_ENV: "test",
+            APP_ENV: "development",
+            OWNER_EMAIL: "owner@example.com",
             AUTH_SECRET: "test-secret",
           },
         },

@@ -22,6 +22,19 @@ export async function createMagicToken(
   return token;
 }
 
+export async function hasPendingMagicToken(
+  db: D1Database,
+  email: string,
+): Promise<boolean> {
+  const row = await db
+    .prepare(
+      "SELECT 1 FROM magic_tokens WHERE email = ? AND used_at IS NULL AND expires_at > ? LIMIT 1",
+    )
+    .bind(email.trim().toLowerCase(), new Date().toISOString())
+    .first();
+  return !!row;
+}
+
 export async function consumeMagicToken(
   db: D1Database,
   token: string,

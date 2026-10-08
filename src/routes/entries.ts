@@ -22,6 +22,13 @@ entryRoutes.use("*", requireSession);
 const KINDS: EntryKind[] = ["tool", "workflow", "decision", "note"];
 const STATUSES: EntryStatus[] = ["inbox", "filed", "archived"];
 
+function invalidTags(tags: unknown): boolean {
+  return (
+    tags !== undefined &&
+    (!Array.isArray(tags) || !tags.every((t) => typeof t === "string"))
+  );
+}
+
 entryRoutes.get("/", async (c) => {
   const q = c.req.query("q");
   if (q) {
@@ -44,6 +51,7 @@ entryRoutes.post("/", async (c) => {
   if (body.status && !STATUSES.includes(body.status)) {
     return c.json({ error: "invalid status" }, 400);
   }
+  if (invalidTags(body.tags)) return c.json({ error: "invalid tags" }, 400);
   const entry = await createEntry(c.env.DB, {
     ...body,
     title: body.title.trim(),
@@ -66,6 +74,7 @@ entryRoutes.patch("/:id", async (c) => {
   if (body.status && !STATUSES.includes(body.status)) {
     return c.json({ error: "invalid status" }, 400);
   }
+  if (invalidTags(body.tags)) return c.json({ error: "invalid tags" }, 400);
   const existing = await getEntry(c.env.DB, c.req.param("id"));
   if (!existing) return c.json({ error: "not found" }, 404);
   return c.json(await updateEntry(c.env.DB, existing.id, body));

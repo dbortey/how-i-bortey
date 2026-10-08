@@ -6,6 +6,11 @@ import { requireSession, type AppEnv } from "./middleware/auth";
 
 const app = new Hono<AppEnv>();
 
+app.onError((err, c) => {
+  console.error("unhandled error", err);
+  return c.json({ error: "internal error" }, 500);
+});
+
 app.get("/health", (c) => c.json({ ok: true }));
 app.route("/auth", authRoutes);
 app.get("/me", requireSession, (c) => c.json({ userId: c.get("userId") }));

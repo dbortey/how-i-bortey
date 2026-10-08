@@ -57,6 +57,16 @@ describe("entry API", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rejects non-string tags with 400", async () => {
+    const cookie = await authCookie();
+    const res = await SELF.fetch("https://example.com/entries", {
+      method: "POST",
+      headers: { cookie, "content-type": "application/json" },
+      body: JSON.stringify({ title: "X", tags: "photo" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
   it("searches with ?q=", async () => {
     const cookie = await authCookie();
     await SELF.fetch("https://example.com/entries", {
@@ -73,21 +83,43 @@ describe("entry API", () => {
 });
 
 describe("auth flow", () => {
-  it("requests a magic link (dev returns link) and verifies it into a session", async () => {
-    const req = await SELF.fetch("https://example.com/auth/request", {
+  async function requestLink(email: string): Promise<Response> {
+    return SELF.fetch("https://example.com/auth/request", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email: "owner@example.com" }),
+      body: JSON.stringify({ email }),
     });
-    const body = await req.json<{ ok: boolean; devLink: string }>();
-    expect(body.ok).toBe(true);
-    const token = new URL(body.devLink).searchParams.get("token")!;
+  }
 
-    const verify = await SELF.fetch(`https://example.com/auth/verify?token=${token}`, {
+  it("returns a dev link for the owner and refuses strangers", async () => {
+    const ok = await requestLink("owner@example.com");
+    expect(ok.status).toBe(200);
+    const body = await ok.json<{ ok: boolean; devLink: string }>();
+    expect(body.devLink).toContain("/auth/verify?token=");
+
+    const denied = await requestLink("stranger@example.com");
+    expect(denied.status).toBe(403);
+  });
+
+  it("GET verify renders a confirm page without consuming the token; POST consumes it", async () => {
+    const req = await requestLink("owner@example.com");
+    const devLink = (await req.json<{ devLink: string }>()).devLink;
+    const token = new URL(devLink).searchParams.get("token")!;
+
+    const page = await SELF.fetch(`https://example.com/auth/verify?token=${token}`);
+    expect(page.status).toBe(200);
+    expect(page.headers.get("content-type") ?? "").toContain("text/html");
+    const html = await page.text();
+    expect(html.toLowerCase()).toContain("confirm");
+
+    const post = await SELF.fetch("https://example.com/auth/verify", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: `token=${token}`,
       redirect: "manual",
     });
-    expect(verify.status).toBe(302);
-    const setCookie = verify.headers.get("set-cookie") ?? "";
+    expect(post.status).toBe(302);
+    const setCookie = post.headers.get("set-cookie") ?? "";
     expect(setCookie).toContain("hib_session=");
 
     const me = await SELF.fetch("https://example.com/me", {
@@ -96,8 +128,32 @@ describe("auth flow", () => {
     expect((await me.json<{ userId: string }>()).userId).toBeTruthy();
   });
 
-  it("rejects an invalid magic token", async () => {
-    const res = await SELF.fetch("https://example.com/auth/verify?token=nope", {
+  it("rejects a reused magic token", async () => {
+    const req = await requestLink("owner@example.com");
+    const devLink = (await req.json<{ devLink: string }>()).devLink;
+    const token = new URL(devLink).searchParams.get("token")!;
+    const headers = { "content-type": "application/x-www-form-urlencoded" };
+    const first = await SELF.fetch("https://example.com/auth/verify", {
+      method: "POST",
+      headers,
+      body: `token=${token}`,
+      redirect: "manual",
+    });
+    expect(first.status).toBe(302);
+    const second = await SELF.fetch("https://example.com/auth/verify", {
+      method: "POST",
+      headers,
+      body: `token=${token}`,
+      redirect: "manual",
+    });
+    expect(second.status).toBe(400);
+  });
+
+  it("rejects an invalid magic token on POST", async () => {
+    const res = await SELF.fetch("https://example.com/auth/verify", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: "token=nope",
       redirect: "manual",
     });
     expect(res.status).toBe(400);

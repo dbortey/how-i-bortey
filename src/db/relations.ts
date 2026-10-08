@@ -51,3 +51,31 @@ export async function getRelations(
       : null,
   }));
 }
+
+export async function createRelation(
+  db: D1Database,
+  fromEntry: string,
+  input: { to_entry: string; type: string; verdict?: string; reason?: string },
+): Promise<Relation> {
+  const id = crypto.randomUUID();
+  await db
+    .prepare(
+      "INSERT INTO entry_relations (id, from_entry, to_entry, type, verdict, reason) VALUES (?, ?, ?, ?, ?, ?)",
+    )
+    .bind(id, fromEntry, input.to_entry, input.type, input.verdict ?? null, input.reason ?? null)
+    .run();
+  const all = await getRelations(db, fromEntry);
+  return all.find((r) => r.id === id)!;
+}
+
+export async function deleteRelation(
+  db: D1Database,
+  entryId: string,
+  relationId: string,
+): Promise<boolean> {
+  const res = await db
+    .prepare("DELETE FROM entry_relations WHERE id = ? AND from_entry = ?")
+    .bind(relationId, entryId)
+    .run();
+  return (res.meta.changes ?? 0) > 0;
+}

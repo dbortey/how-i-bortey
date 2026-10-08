@@ -9,6 +9,8 @@ import {
   updateEntry,
 } from "../db/entries";
 import { searchEntries } from "../db/search";
+import { createLink, deleteLink, getLinks } from "../db/links";
+import { createRelation, deleteRelation, getRelations } from "../db/relations";
 import type {
   CreateEntryInput,
   EntryKind,
@@ -62,7 +64,55 @@ entryRoutes.post("/", async (c) => {
 entryRoutes.get("/:id", async (c) => {
   const entry = await getEntry(c.env.DB, c.req.param("id"));
   if (!entry) return c.json({ error: "not found" }, 404);
-  return c.json(entry);
+  return c.json({
+    ...entry,
+    relations: await getRelations(c.env.DB, entry.id),
+    links: await getLinks(c.env.DB, entry.id),
+  });
+});
+
+entryRoutes.post("/:id/links", async (c) => {
+  const entry = await getEntry(c.env.DB, c.req.param("id"));
+  if (!entry) return c.json({ error: "not found" }, 404);
+  const body = await c.req.json<{ url?: unknown; title?: unknown; kind?: unknown; note?: unknown }>().catch(() => null);
+  if (!body || typeof body.url !== "string" || !body.url.trim()) {
+    return c.json({ error: "url is required" }, 400);
+  }
+  const link = await createLink(c.env.DB, entry.id, {
+    url: body.url.trim(),
+    title: typeof body.title === "string" ? body.title : undefined,
+    kind: typeof body.kind === "string" ? body.kind : undefined,
+    note: typeof body.note === "string" ? body.note : undefined,
+  });
+  return c.json(link, 201);
+});
+
+entryRoutes.delete("/:id/links/:linkId", async (c) => {
+  const ok = await deleteLink(c.env.DB, c.req.param("id"), c.req.param("linkId"));
+  return ok ? c.body(null, 204) : c.json({ error: "not found" }, 404);
+});
+
+entryRoutes.post("/:id/relations", async (c) => {
+  const entry = await getEntry(c.env.DB, c.req.param("id"));
+  if (!entry) return c.json({ error: "not found" }, 404);
+  const body = await c.req.json<{ to_entry?: unknown; type?: unknown; verdict?: unknown; reason?: unknown }>().catch(() => null);
+  if (!body || typeof body.to_entry !== "string" || typeof body.type !== "string" || !body.type.trim()) {
+    return c.json({ error: "to_entry and type are required" }, 400);
+  }
+  const target = await getEntry(c.env.DB, body.to_entry);
+  if (!target) return c.json({ error: "target entry not found" }, 400);
+  const relation = await createRelation(c.env.DB, entry.id, {
+    to_entry: body.to_entry,
+    type: body.type,
+    verdict: typeof body.verdict === "string" ? body.verdict : undefined,
+    reason: typeof body.reason === "string" ? body.reason : undefined,
+  });
+  return c.json(relation, 201);
+});
+
+entryRoutes.delete("/:id/relations/:relationId", async (c) => {
+  const ok = await deleteRelation(c.env.DB, c.req.param("id"), c.req.param("relationId"));
+  return ok ? c.body(null, 204) : c.json({ error: "not found" }, 404);
 });
 
 entryRoutes.patch("/:id", async (c) => {

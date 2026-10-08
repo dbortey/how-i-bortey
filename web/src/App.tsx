@@ -2,6 +2,8 @@ import { Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import { Login } from "./pages/Login";
 import { Library } from "./pages/Library";
+import { Capture } from "./pages/Capture";
+import { Inbox } from "./pages/Inbox";
 import { useSession } from "./lib/query";
 
 function Stub({ name }: { name: string }) {
@@ -18,8 +20,8 @@ export function App() {
         <Route path="/" element={<Library />} />
         <Route path="/library" element={<Library />} />
         <Route path="/library/:id" element={<Stub name="Entry" />} />
-        <Route path="/capture" element={<Stub name="Capture" />} />
-        <Route path="/inbox" element={<Stub name="Inbox" />} />
+        <Route path="/capture" element={<Capture />} />
+        <Route path="/inbox" element={<Inbox />} />
         <Route path="/access" element={<Stub name="Access" />} />
         <Route path="*" element={<Stub name="Not found" />} />
       </Route>

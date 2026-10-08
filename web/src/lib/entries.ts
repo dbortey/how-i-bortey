@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
 
 export interface Entry {
@@ -26,3 +26,32 @@ export function useEntries(query: string, filters: { status?: string; kind?: str
 }
 
 export const getEntry = (id: string) => api<Entry & { links: unknown[]; relations: unknown[] }>(`/entries/${id}`);
+
+export interface NewEntry {
+  title: string;
+  kind?: string;
+  body?: string;
+  tags?: string[];
+  source_url?: string;
+}
+
+export function useCreateEntry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: NewEntry) =>
+      api<Entry>("/entries", { method: "POST", body: JSON.stringify(input) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["entries"] }),
+  });
+}
+
+export function useInbox() {
+  return useQuery({ queryKey: ["entries", "inbox"], queryFn: () => api<Entry[]>("/entries?status=inbox") });
+}
+
+export function useFileEntry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api<Entry>(`/entries/${id}`, { method: "PATCH", body: JSON.stringify({ status: "filed" }) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["entries"] }),
+  });
+}

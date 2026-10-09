@@ -154,4 +154,42 @@ describe("telegram photo capture", () => {
     const media = await getMediaForEntry(env.DB, entries[0].id);
     expect(media).toHaveLength(0);
   });
+
+  it("keeps the entry when media storage fails after a successful download", async () => {
+    // Bytes download fine, but R2 put rejects - the capture must still survive
+    // so Telegram's retry (triggered by a 500) cannot duplicate the entry.
+    const put = vi.spyOn(env.MEDIA, "put").mockRejectedValueOnce(new Error("R2 down"));
+
+    const res = await post({
+      update_id: 13,
+      message: {
+        message_id: 13,
+        chat: { id: 42 },
+        caption: "Media failed",
+        photo: [{ file_id: "big" }],
+      },
+    });
+    put.mockRestore();
+    expect(res.status).toBe(200);
+
+    const entries = await listEntries(env.DB, { status: "inbox" });
+    expect(entries).toHaveLength(1);
+    expect(entries[0].title).toBe("Media failed");
+    expect(entries[0].body).toBe("Media failed");
+    const media = await getMediaForEntry(env.DB, entries[0].id);
+    expect(media).toHaveLength(0);
+
+    // The claim was not released, so a Telegram retry is a no-op.
+    const again = await post({
+      update_id: 13,
+      message: {
+        message_id: 13,
+        chat: { id: 42 },
+        caption: "Media failed",
+        photo: [{ file_id: "big" }],
+      },
+    });
+    expect(again.status).toBe(200);
+    expect(await listEntries(env.DB, { status: "inbox" })).toHaveLength(1);
+  });
 });

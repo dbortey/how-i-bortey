@@ -74,12 +74,18 @@ export async function handleUpdate(env: Env, update: Record<string, unknown>): P
     if (largest.file_id) {
       const bytes = await downloadFile(env, largest.file_id);
       if (bytes) {
-        await putMedia(env.DB, env.MEDIA, {
-          bytes,
-          mime: "image/jpeg",
-          entryId: entry.id,
-          caption: message.caption ?? null,
-        });
+        // Best-effort: a media storage failure must never fail the capture,
+        // otherwise a retry would duplicate the entry. The entry survives.
+        try {
+          await putMedia(env.DB, env.MEDIA, {
+            bytes,
+            mime: "image/jpeg",
+            entryId: entry.id,
+            caption: message.caption ?? null,
+          });
+        } catch {
+          // Ignore: the text/caption has already been saved.
+        }
       }
     }
     await sendMessage(env, chatId, `Saved: ${title}`);

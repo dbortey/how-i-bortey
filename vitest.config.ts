@@ -17,6 +17,7 @@ export default defineConfig(async () => {
             OWNER_EMAIL: "owner@example.com",
             AUTH_SECRET: "test-secret",
             TELEGRAM_WEBHOOK_SECRET: "test-webhook-secret",
+            TELEGRAM_BOT_TOKEN: "test-bot-token",
           },
         },
       }),

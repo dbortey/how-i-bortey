@@ -18,6 +18,15 @@ telegramRoutes.post("/webhook", async (c) => {
     .run();
   if ((inserted.meta.changes ?? 0) === 0) return c.json({ ok: true }); // already processed
 
-  c.executionCtx.waitUntil(handleUpdate(c.env, update as Record<string, unknown>));
+  try {
+    await handleUpdate(c.env, update as Record<string, unknown>);
+  } catch {
+    // Release the claim so Telegram's retry can reprocess the update.
+    await c.env.DB
+      .prepare("DELETE FROM telegram_updates WHERE update_id = ?")
+      .bind(update.update_id)
+      .run();
+    return c.json({ error: "processing failed" }, 500);
+  }
   return c.json({ ok: true });
 });

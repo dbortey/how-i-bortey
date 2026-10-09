@@ -26,6 +26,9 @@
   "send_email": [
     { "name": "EMAIL" }
   ],
+  "email": [
+    { "name": "EMAIL_HANDLER" }
+  ],
   "assets": {
     "directory": "./web/dist",
     "binding": "ASSETS",

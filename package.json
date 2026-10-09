@@ -14,7 +14,8 @@
     "db:migrate:remote": "wrangler d1 migrations apply how-i-bortey-db --remote"
   },
   "dependencies": {
-    "hono": "^4.6.9"
+    "hono": "^4.6.9",
+    "postal-mime": "^4.0.5"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.23.0",

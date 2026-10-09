@@ -1,7 +1,7 @@
 export type EntryKind = "tool" | "workflow" | "decision" | "note";
 export type EntryStatus = "inbox" | "filed" | "archived";
 export type EntryVerdict = "use" | "avoid" | "watching";
-export type EntrySource = "web" | "telegram" | "mcp";
+export type EntrySource = "web" | "telegram" | "mcp" | "email";
 
 export interface Entry {
   id: string;

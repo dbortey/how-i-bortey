@@ -83,6 +83,29 @@ describe("inbound email capture", () => {
     expect(entries[0].body).not.toContain("<");
   });
 
+  it("still creates an entry when the MIME body cannot be parsed", async () => {
+    const enc = new TextEncoder();
+    let nested = 'Content-Type: multipart/mixed; boundary="b"\r\n\r\n';
+    for (let i = 0; i < 300; i++) {
+      nested += '--b\r\nContent-Type: multipart/mixed; boundary="b"\r\n\r\n';
+    }
+    const malformed = {
+      from: "owner@example.com",
+      headers: new Headers({ subject: "Broken MIME" }),
+      raw: new ReadableStream({
+        start(c) {
+          c.enqueue(enc.encode(nested));
+          c.close();
+        },
+      }),
+    };
+    await expect(handleInboundEmail(malformed, env)).resolves.toBeUndefined();
+    const entries = await listEntries(env.DB, { status: "inbox" });
+    expect(entries).toHaveLength(1);
+    expect(entries[0].source).toBe("email");
+    expect(entries[0].title).toBe("Broken MIME");
+  });
+
   it("trims trailing sentence punctuation from an extracted URL", async () => {
     const enc = new TextEncoder();
     const trailing = {

@@ -76,26 +76,28 @@ describe("telegram text capture", () => {
     expect(calls).toHaveLength(1);
   });
 
-  it("returns 500, releases the claim, and reprocesses on retry when processing fails", async () => {
+  it("still saves the entry and does not duplicate when the reply fails", async () => {
     reply = async () => {
       throw new Error("reply failed");
     };
 
-    const res = await post(textUpdate(9, "will fail"));
-    expect(res.status).toBe(500);
+    const res = await post(textUpdate(9, "still saved"));
+    expect(res.status).toBe(200);
+
+    let entries = await listEntries(env.DB, { status: "inbox" });
+    expect(entries).toHaveLength(1);
+    expect(entries[0].title).toBe("still saved");
 
     let { results } = await env.DB.prepare("SELECT update_id FROM telegram_updates")
       .all<{ update_id: number }>();
-    expect(results).toHaveLength(0);
+    expect(results).toHaveLength(1);
 
-    reply = async () =>
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
-    const retry = await post(textUpdate(9, "will fail"));
+    // A Telegram retry of the same update must not duplicate the capture.
+    const retry = await post(textUpdate(9, "still saved"));
     expect(retry.status).toBe(200);
 
+    entries = await listEntries(env.DB, { status: "inbox" });
+    expect(entries).toHaveLength(1);
     ({ results } = await env.DB.prepare("SELECT update_id FROM telegram_updates")
       .all<{ update_id: number }>());
     expect(results).toHaveLength(1);

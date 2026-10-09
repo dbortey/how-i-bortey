@@ -9,7 +9,11 @@ export interface InboundMessage {
 
 function firstUrl(text: string): string | null {
   const match = text.match(/https?:\/\/[^\s)>"']+/);
-  return match ? match[0] : null;
+  return match ? match[0].replace(/[.,;:]+$/, "") : null;
+}
+
+function htmlToText(html: string): string {
+  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function fallbackText(raw: ArrayBuffer): string {
@@ -22,7 +26,10 @@ function fallbackText(raw: ArrayBuffer): string {
 export async function handleInboundEmail(message: InboundMessage, env: Env): Promise<void> {
   const raw = await new Response(message.raw).arrayBuffer();
   const parsed = await new PostalMime().parse(raw);
-  const text = (parsed.text ?? "").trim() || fallbackText(raw);
+  const text =
+    (parsed.text ?? "").trim() ||
+    htmlToText(parsed.html ?? "") ||
+    fallbackText(raw);
   const subject = (parsed.subject ?? message.headers.get("subject") ?? "").trim();
   const firstLine = text.split("\n")[0]?.trim() ?? "";
   const title = (subject || firstLine || "Email note").slice(0, 120);

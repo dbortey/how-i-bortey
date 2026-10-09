@@ -54,4 +54,59 @@ describe("inbound email capture", () => {
     const entries = await listEntries(env.DB, { status: "inbox" });
     expect(entries[0].title).toBe("Body line one");
   });
+
+  it("extracts readable text from an HTML-only email", async () => {
+    const enc = new TextEncoder();
+    const htmlOnly = {
+      from: "owner@example.com",
+      headers: new Headers({ subject: "Html capture" }),
+      raw: new ReadableStream({
+        start(c) {
+          c.enqueue(
+            enc.encode(
+              [
+                "From: owner@example.com",
+                "Subject: Html capture",
+                "Content-Type: text/html; charset=utf-8",
+                "",
+                "<p>Open source <b>raw</b> editor</p>",
+              ].join("\r\n"),
+            ),
+          );
+          c.close();
+        },
+      }),
+    };
+    await handleInboundEmail(htmlOnly, env);
+    const entries = await listEntries(env.DB, { status: "inbox" });
+    expect(entries[0].body).toContain("Open source raw editor");
+    expect(entries[0].body).not.toContain("<");
+  });
+
+  it("trims trailing sentence punctuation from an extracted URL", async () => {
+    const enc = new TextEncoder();
+    const trailing = {
+      from: "owner@example.com",
+      headers: new Headers({ subject: "Link" }),
+      raw: new ReadableStream({
+        start(c) {
+          c.enqueue(
+            enc.encode(
+              [
+                "From: owner@example.com",
+                "Subject: Link",
+                "Content-Type: text/plain; charset=utf-8",
+                "",
+                "See https://example.com.",
+              ].join("\r\n"),
+            ),
+          );
+          c.close();
+        },
+      }),
+    };
+    await handleInboundEmail(trailing, env);
+    const entries = await listEntries(env.DB, { status: "inbox" });
+    expect(entries[0].source_url).toBe("https://example.com");
+  });
 });

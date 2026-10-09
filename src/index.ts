@@ -4,6 +4,7 @@ import { entryRoutes } from "./routes/entries";
 import { mediaRoutes } from "./routes/media";
 import { accessRoutes } from "./routes/access";
 import { mcpRoutes } from "./mcp/routes";
+import { telegramRoutes } from "./telegram/routes";
 import { requireSession, type AppEnv } from "./middleware/auth";
 
 const app = new Hono<AppEnv>();
@@ -20,5 +21,6 @@ app.route("/entries", entryRoutes);
 app.route("/media", mediaRoutes);
 app.route("/access", accessRoutes);
 app.route("/mcp", mcpRoutes);
+app.route("/telegram", telegramRoutes);
 
 export default app;

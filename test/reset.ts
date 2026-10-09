@@ -12,5 +12,6 @@ export async function resetDb(): Promise<void> {
     env.DB.prepare("DELETE FROM sessions"),
     env.DB.prepare("DELETE FROM magic_tokens"),
     env.DB.prepare("DELETE FROM users"),
+    env.DB.prepare("DELETE FROM telegram_updates"),
   ]);
 }

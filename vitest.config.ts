@@ -16,6 +16,7 @@ export default defineConfig(async () => {
             APP_ENV: "development",
             OWNER_EMAIL: "owner@example.com",
             AUTH_SECRET: "test-secret",
+            TELEGRAM_WEBHOOK_SECRET: "test-webhook-secret",
           },
         },
       }),

@@ -11,6 +11,7 @@ export interface Entry {
   source_url: string | null;
   attributes: Record<string, unknown>;
   tags: string[];
+  media?: Array<{ id: string; mime: string | null }>;
 }
 
 export function useEntries(query: string, filters: { status?: string; kind?: string } = {}) {

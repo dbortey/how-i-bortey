@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -80,6 +80,21 @@ describe("EntryEdit", () => {
       expect.objectContaining({ body: expect.stringContaining('"verdict":"avoid"') }),
     );
   }, 15000);
+
+  it("renders media thumbnails for the entry", async () => {
+    vi.spyOn(api, "api").mockImplementation(async (path: string) => {
+      if (path === "/entries/e1") return entryData({ media: [{ id: "m1", mime: "image/png" }] });
+      return [];
+    });
+    const { container } = renderEdit();
+    await screen.findByDisplayValue("Capture One");
+    const img = await waitFor(() => {
+      const el = container.querySelector('img[src="/media/m1"]');
+      if (!el) throw new Error("media image not rendered");
+      return el;
+    });
+    expect(img).toBeInTheDocument();
+  });
 
   it("posts a relation with verdict and reason", async () => {
     const user = userEvent.setup({ delay: null });

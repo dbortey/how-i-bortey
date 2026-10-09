@@ -139,6 +139,22 @@ export function EntryEdit() {
         <Button type="submit" disabled={update.isPending}>Save</Button>
       </form>
 
+      {entry.media && entry.media.length > 0 && (
+        <Card className="space-y-2 p-4">
+          <h2 className="font-medium">Media</h2>
+          <div className="flex flex-wrap gap-2">
+            {entry.media.map((m) => (
+              <img
+                key={m.id}
+                src={`/media/${m.id}`}
+                alt=""
+                className="h-24 w-24 rounded object-cover"
+              />
+            ))}
+          </div>
+        </Card>
+      )}
+
       <Card className="space-y-3 p-4">
         <h2 className="font-medium">Links</h2>
         <ul className="space-y-1">

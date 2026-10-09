@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
 export function Capture() {
   const nav = useNavigate();
   const create = useCreateEntry();
   const [title, setTitle] = useState("");
+  const [kind, setKind] = useState("tool");
   const [body, setBody] = useState("");
   const [tags, setTags] = useState("");
   const [url, setUrl] = useState("");
@@ -26,6 +28,7 @@ export function Capture() {
     create.mutate(
       {
         title: title.trim(),
+        kind,
         body: body || undefined,
         source_url: url || undefined,
         tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
@@ -54,6 +57,17 @@ export function Capture() {
       <div className="space-y-2">
         <Label htmlFor="tags">Tags (comma-separated)</Label>
         <Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="kind">Kind</Label>
+        <Select value={kind} onValueChange={setKind}>
+          <SelectTrigger id="kind"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {["tool", "workflow", "decision", "note"].map((k) => (
+              <SelectItem key={k} value={k}>{k}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-2">
         <Label htmlFor="url">Source URL</Label>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAddLink, useAddRelation, useEntries, useEntry, useUpdateEntry } from "@/lib/entries";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,10 @@ import type { Entry } from "@/lib/entries";
 interface Relation { id: string; type: string; verdict: string | null; reason: string | null; related: { id: string; title: string } | null }
 interface Link { id: string; url: string; title: string | null; kind: string | null }
 
+const KINDS = ["tool", "workflow", "decision", "note"];
+const VERDICTS = ["use", "avoid", "watching"];
+const RELATION_VERDICTS = ["chosen", "considered", "rejected", "watching"];
+
 export function EntryEdit() {
   const { id = "" } = useParams();
   const { data, isPending, isError } = useEntry(id);
@@ -23,6 +27,8 @@ export function EntryEdit() {
   const all = useEntries("");
 
   const [title, setTitle] = useState("");
+  const [kind, setKind] = useState("tool");
+  const [verdict, setVerdict] = useState("none");
   const [body, setBody] = useState("");
   const [tags, setTags] = useState("");
   const [rating, setRating] = useState("");
@@ -30,11 +36,17 @@ export function EntryEdit() {
   const [linkUrl, setLinkUrl] = useState("");
   const [relTarget, setRelTarget] = useState("");
   const [relType, setRelType] = useState("alternative_of");
+  const [relVerdict, setRelVerdict] = useState("");
+  const [relReason, setRelReason] = useState("");
   const [titleError, setTitleError] = useState<string | null>(null);
+  const seededId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (data) {
+    if (data && seededId.current !== data.id) {
+      seededId.current = data.id;
       setTitle(data.title);
+      setKind(data.kind || "tool");
+      setVerdict(data.verdict ?? "none");
       setBody(data.body);
       setTags(data.tags.join(", "));
       setRating(String(data.attributes.my_rating ?? ""));
@@ -54,6 +66,8 @@ export function EntryEdit() {
     update.mutate(
       {
         title: title.trim(),
+        kind,
+        verdict: verdict === "none" ? undefined : verdict,
         body,
         tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
         attributes: {
@@ -83,6 +97,29 @@ export function EntryEdit() {
           <Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} />
         </div>
         <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="kind">Kind</Label>
+            <Select value={kind} onValueChange={setKind}>
+              <SelectTrigger id="kind"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {KINDS.map((k) => (
+                  <SelectItem key={k} value={k}>{k}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="verdict">Verdict</Label>
+            <Select value={verdict} onValueChange={setVerdict}>
+              <SelectTrigger id="verdict"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {VERDICTS.map((v) => (
+                  <SelectItem key={v} value={v}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="rating">My rating (1–5)</Label>
             <Input id="rating" type="number" min={1} max={5} value={rating} onChange={(e) => setRating(e.target.value)} />
@@ -136,9 +173,9 @@ export function EntryEdit() {
           ))}
           {entry.relations.length === 0 && <li className="text-sm text-muted-foreground">No alternatives recorded.</li>}
         </ul>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Select value={relTarget} onValueChange={setRelTarget}>
-            <SelectTrigger className="flex-1"><SelectValue placeholder="Choose an entry…" /></SelectTrigger>
+            <SelectTrigger className="flex-1" aria-label="Related entry"><SelectValue placeholder="Choose an entry…" /></SelectTrigger>
             <SelectContent>
               {(all.data ?? []).filter((e) => e.id !== id).map((e) => (
                 <SelectItem key={e.id} value={e.id}>{e.title}</SelectItem>
@@ -146,18 +183,30 @@ export function EntryEdit() {
             </SelectContent>
           </Select>
           <Select value={relType} onValueChange={setRelType}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger aria-label="Relation type"><SelectValue /></SelectTrigger>
             <SelectContent>
               {["alternative_of", "supersedes", "pairs_with"].map((t) => (
                 <SelectItem key={t} value={t}>{t}</SelectItem>
               ))}
             </SelectContent>
           </Select>
+          <Select value={relVerdict} onValueChange={setRelVerdict}>
+            <SelectTrigger aria-label="Relation verdict"><SelectValue placeholder="Verdict" /></SelectTrigger>
+            <SelectContent>
+              {RELATION_VERDICTS.map((v) => (
+                <SelectItem key={v} value={v}>{v}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input aria-label="Reason" placeholder="Reason" value={relReason} onChange={(e) => setRelReason(e.target.value)} />
           <Button
             type="button"
             onClick={() => {
               if (!relTarget) return;
-              addRelation.mutate({ to_entry: relTarget, type: relType }, { onSuccess: () => toast.success("Relation added.") });
+              addRelation.mutate(
+                { to_entry: relTarget, type: relType, verdict: relVerdict || undefined, reason: relReason || undefined },
+                { onSuccess: () => { setRelVerdict(""); setRelReason(""); toast.success("Relation added."); } },
+              );
             }}
           >
             Add

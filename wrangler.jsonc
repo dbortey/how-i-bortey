@@ -23,6 +23,9 @@
   "r2_buckets": [
     { "binding": "MEDIA", "bucket_name": "how-i-bortey-media" }
   ],
+  "send_email": [
+    { "name": "EMAIL" }
+  ],
   "assets": {
     "directory": "./web/dist",
     "binding": "ASSETS",

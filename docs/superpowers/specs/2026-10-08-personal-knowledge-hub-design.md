@@ -246,20 +246,24 @@ CLI) plus the `mcp-remote` bridge snippet for stdio-only clients.
 ## 12. Auth
 
 - **Recommended:** magic-link email implemented directly in the Worker
-  (send via Resend, store a one-time token in D1, verify on click). Keeps the
-  stack uniform and avoids pulling a heavy auth framework onto Workers.
+  (send via Cloudflare Email Service's native `send_email` binding — free to a
+  verified destination address, no API key; any HTTP ESP such as Resend, Brevo
+  or Postmark works as a drop-in fallback; store a one-time token in D1, verify
+  on click). Keeps the stack uniform and avoids pulling a heavy auth framework
+  onto Workers.
 - **Alternative:** passphrase + signed session cookie.
 - Both back onto the `users` + `sessions` tables so the kill switch is uniform.
 
 ## 13. Hosting, bindings & secrets
 
 - **Cloudflare Worker** `how-i-bortey` — API + `/mcp` + Telegram webhook + Cron.
-- **Bindings:** `DB` (D1), `MEDIA` (R2), `SESSIONS` (KV, optional), `VECTORIZE`
-  (later).
+- **Bindings:** `DB` (D1), `MEDIA` (R2), `EMAIL` (`send_email`), `SESSIONS`
+  (KV, optional), `VECTORIZE` (later).
 - **Static UI** — Cloudflare Pages/Workers static assets.
 - **Secrets (`wrangler secret put`):** `TELEGRAM_BOT_TOKEN`,
-  `TELEGRAM_WEBHOOK_SECRET`, `RESEND_API_KEY`, `AUTH_SECRET`,
-  `GITHUB_MIRROR_TOKEN`.
+  `TELEGRAM_WEBHOOK_SECRET`, `AUTH_SECRET`, `GITHUB_MIRROR_TOKEN`. (No email
+  API key: outbound mail uses the `EMAIL` binding; sending to a verified
+  destination address is free on any plan once Email Routing is enabled.)
 - **Config:** `wrangler.toml`/`wrangler.jsonc` for bindings and Cron schedule.
 - **Cost:** free at personal scale across all Cloudflare products.
 

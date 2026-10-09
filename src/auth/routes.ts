@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../middleware/auth";
 import { readCookie } from "../middleware/auth";
+import { sendMagicLinkEmail } from "./email";
 import {
   consumeMagicToken,
   createMagicToken,
@@ -52,8 +53,8 @@ authRoutes.post("/request", async (c) => {
   const origin = new URL(c.req.url).origin;
   const devLink = `${origin}/auth/verify?token=${token}`;
   if (c.env.APP_ENV === "development") return c.json({ ok: true, devLink });
-  if (!c.env.RESEND_API_KEY) return c.json({ error: "email not configured" }, 500);
-  await sendMagicEmail(c.env.RESEND_API_KEY, body.email, devLink);
+  if (!c.env.EMAIL) return c.json({ error: "email not configured" }, 500);
+  await sendMagicLinkEmail(c.env.EMAIL, body.email, devLink);
   return c.json({ ok: true });
 });
 
@@ -94,19 +95,3 @@ authRoutes.post("/logout", async (c) => {
   return c.json({ ok: true });
 });
 
-async function sendMagicEmail(apiKey: string, email: string, link: string): Promise<void> {
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      from: "How I Bortey <login@switgh.com>",
-      to: email,
-      subject: "Your How I Bortey sign-in link",
-      text: `Sign in: ${link}`,
-    }),
-  });
-  if (!res.ok) throw new Error(`magic link email failed: ${res.status}`);
-}

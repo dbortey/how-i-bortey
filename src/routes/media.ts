@@ -9,7 +9,7 @@ mediaRoutes.use("*", requireSession);
 
 mediaRoutes.post("/", async (c) => {
   const mime = c.req.header("content-type") ?? "application/octet-stream";
-  const entryId = c.req.header("x-entry-id") ?? null;
+  const entryId = c.req.header("x-entry-id")?.trim() || null;
   if (entryId) {
     const entry = await getEntry(c.env.DB, entryId);
     if (!entry) return c.json({ error: "entry not found" }, 400);

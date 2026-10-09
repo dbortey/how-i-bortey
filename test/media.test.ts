@@ -51,6 +51,18 @@ describe("media", () => {
     expect(entry.media[0].mime).toBe("image/jpeg");
   });
 
+  it("treats an empty x-entry-id as unlinked instead of erroring", async () => {
+    const c = await cookie();
+    const up = await SELF.fetch("https://example.com/media", {
+      method: "POST",
+      headers: { cookie: c, "content-type": "image/png", "x-entry-id": "" },
+      body: new Uint8Array([5, 5]),
+    });
+    expect(up.status).toBe(201);
+    const media = await up.json<{ entry_id: string | null }>();
+    expect(media.entry_id).toBeNull();
+  });
+
   it("404s an unknown media id", async () => {
     const c = await cookie();
     const res = await SELF.fetch("https://example.com/media/nope", { headers: { cookie: c } });

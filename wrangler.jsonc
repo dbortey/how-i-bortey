@@ -30,6 +30,6 @@
     "directory": "./web/dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/health", "/me", "/auth/*", "/entries", "/entries/*", "/access/*", "/mcp", "/mcp/*"]
+    "run_worker_first": ["/health", "/me", "/auth/*", "/entries", "/entries/*", "/access/*", "/mcp", "/mcp/*", "/media", "/media/*", "/telegram", "/telegram/*"]
   }
 }

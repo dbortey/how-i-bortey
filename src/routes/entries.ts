@@ -11,6 +11,7 @@ import {
 import { searchEntries } from "../db/search";
 import { createLink, deleteLink, getLinks } from "../db/links";
 import { createRelation, deleteRelation, getRelations } from "../db/relations";
+import { getMediaForEntry } from "../media/store";
 import type {
   CreateEntryInput,
   EntryKind,
@@ -68,6 +69,7 @@ entryRoutes.get("/:id", async (c) => {
     ...entry,
     relations: await getRelations(c.env.DB, entry.id),
     links: await getLinks(c.env.DB, entry.id),
+    media: await getMediaForEntry(c.env.DB, entry.id),
   });
 });
 

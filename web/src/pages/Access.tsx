@@ -25,7 +25,8 @@ export function Access() {
     mutationFn: () => apiReindex(),
     onSuccess: (r) => {
       if (r.embedded > 0) toast.success(`Index rebuilt (${r.embedded}/${r.total}).`);
-      else toast.error("Index rebuild failed — nothing was embedded.");
+      else if (r.failed > 0) toast.error("Index rebuild failed — nothing was embedded.");
+      else toast.info("Already up to date.");
     },
     onError: () => toast.error("Index rebuild failed — nothing was embedded."),
   });

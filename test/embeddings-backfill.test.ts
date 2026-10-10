@@ -127,4 +127,23 @@ describe("POST /embeddings/backfill", () => {
       total: 1,
     });
   });
+
+  it("returns 200 when every entry is already embedded (no-op reindex)", async () => {
+    const c = await cookie();
+    const a = await createEntry(env.DB, { title: "A" });
+    const b = await createEntry(env.DB, { title: "B" });
+    await putEmbedding(env.DB, a.id, Float32Array.from({ length: 384 }, () => 0.1), EMBEDDING_MODEL);
+    await putEmbedding(env.DB, b.id, Float32Array.from({ length: 384 }, () => 0.1), EMBEDDING_MODEL);
+    const res = await embeddingRoutes.request(
+      "https://example.com/backfill",
+      { method: "POST", headers: { cookie: c } },
+      { DB: env.DB, AI: fakeAi() } as unknown as Env,
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json<{ embedded: number; total: number; failed: number }>()).toMatchObject({
+      embedded: 0,
+      total: 2,
+      failed: 0,
+    });
+  });
 });

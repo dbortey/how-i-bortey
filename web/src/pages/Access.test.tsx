@@ -54,6 +54,17 @@ describe("Access", () => {
     expect(successSpy).not.toHaveBeenCalled();
   });
 
+  it("shows a neutral toast when nothing needs embedding", async () => {
+    vi.spyOn(api, "listSessions").mockResolvedValue([]);
+    vi.spyOn(api, "reindex").mockResolvedValue({ embedded: 0, total: 2, failed: 0 });
+    const errorSpy = vi.spyOn(toast, "error");
+    const infoSpy = vi.spyOn(toast, "info");
+    renderAccess();
+    await userEvent.click(await screen.findByRole("button", { name: /rebuild search index/i }));
+    expect(infoSpy).toHaveBeenCalledWith("Already up to date.");
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
   it("shows an error toast when reindex rejects", async () => {
     vi.spyOn(api, "listSessions").mockResolvedValue([]);
     vi.spyOn(api, "reindex").mockRejectedValue(new Error("502"));

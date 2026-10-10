@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/PageHeader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
@@ -44,36 +45,41 @@ export function Capture() {
   }
 
   return (
-    <form onSubmit={submit} className="mx-auto max-w-xl space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="title">Title</Label>
-        <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="body">Notes</Label>
-        <Textarea id="body" rows={6} value={body} onChange={(e) => setBody(e.target.value)} />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="tags">Tags (comma-separated)</Label>
-        <Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="kind">Kind</Label>
-        <Select value={kind} onValueChange={setKind}>
-          <SelectTrigger id="kind"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {["tool", "workflow", "decision", "note"].map((k) => (
-              <SelectItem key={k} value={k}>{k}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="url">Source URL</Label>
-        <Input id="url" value={url} onChange={(e) => setUrl(e.target.value)} />
-      </div>
-      <Button type="submit" disabled={create.isPending}>Save</Button>
-    </form>
+    <div>
+      <PageHeader kicker="Add to the library" title="Capture" />
+      <form onSubmit={submit} className="max-w-2xl space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="title">Title</Label>
+          <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
+          {error && <p className="text-sm text-destructive">{error}</p>}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="body">Notes</Label>
+          <Textarea id="body" rows={6} value={body} onChange={(e) => setBody(e.target.value)} />
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="kind">Kind</Label>
+            <Select value={kind} onValueChange={setKind}>
+              <SelectTrigger id="kind"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {["tool", "workflow", "decision", "note"].map((k) => (
+                  <SelectItem key={k} value={k}>{k}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="tags">Tags (comma-separated)</Label>
+            <Input id="tags" value={tags} onChange={(e) => setTags(e.target.value)} />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="url">Source URL</Label>
+          <Input id="url" value={url} onChange={(e) => setUrl(e.target.value)} />
+        </div>
+        <Button type="submit" disabled={create.isPending}>Save</Button>
+      </form>
+    </div>
   );
 }

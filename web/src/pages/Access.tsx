@@ -4,7 +4,7 @@ import { listSessions, logout, mintToken, revokeAll } from "@/lib/api";
 import { queryClient } from "@/lib/query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 
 export function Access() {
@@ -14,7 +14,10 @@ export function Access() {
 
   const mint = useMutation({
     mutationFn: () => mintToken(label),
-    onSuccess: (res) => { setMinted(res.token); toast.success("Token created. Copy it now — it is shown once."); },
+    onSuccess: (res) => {
+      setMinted(res.token);
+      toast.success("Token created. Copy it now — it is shown once.");
+    },
     onError: () => toast.error("Could not create a token."),
   });
 
@@ -33,32 +36,46 @@ export function Access() {
   }
 
   return (
-    <div className="space-y-6">
-      <Card className="space-y-3 p-4">
-        <h2 className="font-medium">MCP token</h2>
-        <p className="text-sm text-muted-foreground">Mint a short-lived token an AI client can use against /mcp. It is shown once.</p>
-        <div className="flex gap-2">
-          <Input value={label} onChange={(e) => setLabel(e.target.value)} />
+    <div>
+      <PageHeader kicker="Security" title="Access" />
+
+      <section className="border-t border-border py-6">
+        <h2 className="mb-1 font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+          MCP token
+        </h2>
+        <p className="mb-4 max-w-lg text-sm text-muted-foreground">
+          Mint a short-lived token an AI client can use against <span className="font-mono">/mcp</span>. It is
+          shown once.
+        </p>
+        <div className="flex max-w-md gap-2">
+          <Input value={label} onChange={(e) => setLabel(e.target.value)} aria-label="Token label" />
           <Button onClick={() => mint.mutate()} disabled={mint.isPending}>Create</Button>
         </div>
         {minted && (
-          <code className="block break-all rounded bg-muted p-2 text-xs">{minted}</code>
+          <code className="mt-3 block max-w-md break-all border border-border bg-muted p-2 font-mono text-xs">
+            {minted}
+          </code>
         )}
-      </Card>
+      </section>
 
-      <Card className="space-y-3 p-4">
-        <h2 className="font-medium">Connected devices</h2>
-        {sessions.isPending && <p className="text-muted-foreground">Loading…</p>}
-        <ul className="space-y-1">
+      <section className="border-t border-border py-6">
+        <h2 className="mb-1 font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+          Connected devices
+        </h2>
+        {sessions.isPending && <p className="text-sm text-muted-foreground">Loading…</p>}
+        {sessions.isError && <p className="text-sm text-destructive">Could not load devices.</p>}
+        <ul className="mb-4 max-w-lg">
           {sessions.data?.map((s) => (
-            <li key={s.id} className="flex items-center justify-between text-sm">
+            <li key={s.id} className="flex items-center justify-between border-b border-border py-2 text-sm">
               <span>{s.device_label ?? "unknown"}</span>
-              <span className="text-muted-foreground">expires {new Date(s.expires_at).toLocaleDateString()}</span>
+              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                expires {new Date(s.expires_at).toLocaleDateString()}
+              </span>
             </li>
           ))}
         </ul>
         <Button variant="destructive" onClick={killSwitch}>Log out everywhere</Button>
-      </Card>
+      </section>
     </div>
   );
 }

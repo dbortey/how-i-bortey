@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import type { Entry } from "@/lib/entries";
 
@@ -144,12 +145,29 @@ export function EntryEdit() {
           <h2 className="font-medium">Media</h2>
           <div className="flex flex-wrap gap-2">
             {entry.media.map((m) => (
-              <img
-                key={m.id}
-                src={`/media/${m.id}`}
-                alt=""
-                className="h-24 w-24 rounded object-cover"
-              />
+              <Dialog key={m.id}>
+                <DialogTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Open larger preview"
+                    className="rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <img
+                      src={`/media/${m.id}`}
+                      alt=""
+                      className="h-24 w-24 cursor-zoom-in rounded object-cover"
+                    />
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl p-2">
+                  <DialogTitle className="sr-only">Image preview</DialogTitle>
+                  <img
+                    src={`/media/${m.id}`}
+                    alt=""
+                    className="max-h-[80vh] w-full object-contain"
+                  />
+                </DialogContent>
+              </Dialog>
             ))}
           </div>
         </Card>

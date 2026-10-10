@@ -96,6 +96,19 @@ describe("EntryEdit", () => {
     expect(img).toBeInTheDocument();
   });
 
+  it("opens a larger preview when a thumbnail is clicked", async () => {
+    const user = userEvent.setup({ delay: null });
+    vi.spyOn(api, "api").mockImplementation(async (path: string) => {
+      if (path === "/entries/e1") return entryData({ media: [{ id: "m1", mime: "image/png" }] });
+      return [];
+    });
+    renderEdit();
+    await screen.findByDisplayValue("Capture One");
+    await user.click(await screen.findByLabelText("Open larger preview"));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.querySelector('img[src="/media/m1"]')).toBeInTheDocument();
+  }, 15000);
+
   it("posts a relation with verdict and reason", async () => {
     const user = userEvent.setup({ delay: null });
     const spy = vi.spyOn(api, "api").mockImplementation(async (path: string) => {

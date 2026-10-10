@@ -33,6 +33,11 @@ Living checklist. I can't click dashboards, use BotFather, or receive your secre
 ## Media serving (R2, Plan 4)
 - ✅ Decided: served by the **Worker route** `GET /media/:id` (session-protected, same-origin). No dashboard step, no public bucket needed. Already live.
 
+## Image optimization — WebP ≤150KB (built-in)
+- ✅ Captured **JPEG** images are converted to **WebP** and capped at **150KB** (quality + downscale loop). Only JPEG is converted (that's what Telegram sends); PNG/other pass through; existing images are not re-processed.
+- ⚠️ **Runtime requirement:** image encoding is CPU-heavy (WASM). Workers **free tier caps CPU at 10ms/request**, which this will exceed — photo captures would fail with a CPU-limit error. If a photo capture fails or `wrangler tail` shows "exceeded CPU time", the account needs **Workers Paid** (30s CPU). Text/email captures are unaffected.
+- ⬜ (verify) Send the Telegram bot a **photo**; I'll confirm the stored media is `image/webp` and ≤150KB.
+
 ## Plan 5 (mirror + instruction file)
 - ⬜ Create a **private** repo for the Markdown mirror (e.g. `how-i-bortey-library`).
 - ⬜ Create a GitHub **fine-grained PAT** (Contents: read & write) scoped to that repo → `npx wrangler secret put GITHUB_MIRROR_TOKEN`.

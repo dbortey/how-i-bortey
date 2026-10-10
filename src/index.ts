@@ -7,6 +7,7 @@ import { mcpRoutes } from "./mcp/routes";
 import { telegramRoutes } from "./telegram/routes";
 import { requireSession, type AppEnv } from "./middleware/auth";
 import { handleInboundEmail } from "./email/inbound";
+import { runMirror } from "./mirror/run";
 
 const app = new Hono<AppEnv>();
 
@@ -30,6 +31,17 @@ export default {
     await handleInboundEmail(
       { from: message.from, headers: message.headers, raw: message.raw },
       env,
+    );
+  },
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(
+      runMirror(env.DB, {
+        repo: env.MIRROR_REPO ?? "",
+        branch: env.MIRROR_BRANCH ?? "main",
+        token: env.GITHUB_MIRROR_TOKEN ?? "",
+      }).catch((err) => {
+        console.error("mirror failed", err);
+      }),
     );
   },
 } satisfies ExportedHandler<Env>;

@@ -8,9 +8,12 @@
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
+  "triggers": { "crons": ["0 3 * * *"] },
   "vars": {
     "APP_ENV": "production",
-    "OWNER_EMAIL": "mrdbortey@gmail.com"
+    "OWNER_EMAIL": "mrdbortey@gmail.com",
+    "MIRROR_REPO": "",
+    "MIRROR_BRANCH": "main"
   },
   "d1_databases": [
     {

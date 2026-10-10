@@ -5,8 +5,7 @@ export interface StoredVector {
 
 function decodeVector(raw: ArrayBuffer | ArrayLike<number>): Float32Array {
   if (raw instanceof ArrayBuffer) return new Float32Array(raw);
-  const bytes = raw instanceof Uint8Array ? raw : Uint8Array.from(raw);
-  return new Float32Array(bytes.slice().buffer);
+  return new Float32Array(Uint8Array.from(raw).buffer);
 }
 
 export function cosine(a: Float32Array, b: Float32Array): number {
@@ -36,7 +35,13 @@ export async function putEmbedding(
        ON CONFLICT(entry_id) DO UPDATE SET
          model = excluded.model, dims = excluded.dims, vector = excluded.vector, updated_at = excluded.updated_at`,
     )
-    .bind(entryId, model, vector.length, vector.buffer, new Date().toISOString())
+    .bind(
+      entryId,
+      model,
+      vector.length,
+      vector.buffer.slice(vector.byteOffset, vector.byteOffset + vector.byteLength),
+      new Date().toISOString(),
+    )
     .run();
 }
 

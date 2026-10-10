@@ -14,6 +14,8 @@
     "db:migrate:remote": "wrangler d1 migrations apply how-i-bortey-db --remote"
   },
   "dependencies": {
+    "@jsquash/jpeg": "^1.6.0",
+    "@jsquash/webp": "^1.5.0",
     "hono": "^4.6.9",
     "postal-mime": "^4.0.5"
   },

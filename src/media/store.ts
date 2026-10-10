@@ -1,3 +1,5 @@
+import { optimizeImage } from "./optimize";
+
 export interface Media {
   id: string;
   entry_id: string | null;
@@ -15,12 +17,23 @@ export async function putMedia(
 ): Promise<Media> {
   const id = crypto.randomUUID();
   const storageKey = `media/${id}`;
-  await r2.put(storageKey, input.bytes, { httpMetadata: { contentType: input.mime } });
+  const optimized = await optimizeImage(input.bytes, input.mime).catch(() => null);
+  const bytes = optimized?.bytes ?? input.bytes;
+  const mime = optimized?.mime ?? input.mime;
+  await r2.put(storageKey, bytes, { httpMetadata: { contentType: mime } });
   await db
     .prepare(
-      "INSERT INTO media (id, entry_id, storage_key, mime, caption) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO media (id, entry_id, storage_key, mime, width, height, caption) VALUES (?, ?, ?, ?, ?, ?, ?)",
     )
-    .bind(id, input.entryId ?? null, storageKey, input.mime, input.caption ?? null)
+    .bind(
+      id,
+      input.entryId ?? null,
+      storageKey,
+      mime,
+      optimized?.width ?? null,
+      optimized?.height ?? null,
+      input.caption ?? null,
+    )
     .run();
   return (await getMedia(db, id))!;
 }

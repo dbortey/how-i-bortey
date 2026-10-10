@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { listSessions, logout, mintToken, revokeAll } from "@/lib/api";
+import { listSessions, logout, mintToken, reindex as apiReindex, revokeAll } from "@/lib/api";
 import { queryClient } from "@/lib/query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,12 @@ export function Access() {
       toast.success("Token created. Copy it now — it is shown once.");
     },
     onError: () => toast.error("Could not create a token."),
+  });
+
+  const reindex = useMutation({
+    mutationFn: () => apiReindex(),
+    onSuccess: (r) => toast.success(`Index rebuilt (${r.embedded}/${r.total}).`),
+    onError: () => toast.error("Could not rebuild the index."),
   });
 
   async function killSwitch() {
@@ -75,6 +81,18 @@ export function Access() {
           ))}
         </ul>
         <Button variant="destructive" onClick={killSwitch}>Log out everywhere</Button>
+      </section>
+
+      <section className="border-t border-border py-6">
+        <h2 className="mb-1 font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+          Search index
+        </h2>
+        <p className="mb-4 max-w-lg text-sm text-muted-foreground">
+          Recompute semantic embeddings for entries that don't have them yet.
+        </p>
+        <Button variant="outline" onClick={() => reindex.mutate()} disabled={reindex.isPending}>
+          Rebuild search index
+        </Button>
       </section>
     </div>
   );

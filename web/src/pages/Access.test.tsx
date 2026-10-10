@@ -26,6 +26,14 @@ function stubReload() {
 }
 
 describe("Access", () => {
+  it("rebuilds the search index", async () => {
+    vi.spyOn(api, "listSessions").mockResolvedValue([]);
+    const spy = vi.spyOn(api, "reindex").mockResolvedValue({ embedded: 3, total: 3 });
+    renderAccess();
+    await userEvent.click(await screen.findByRole("button", { name: /rebuild search index/i }));
+    expect(spy).toHaveBeenCalled();
+  });
+
   it("lists sessions and mints a token", async () => {
     vi.spyOn(api, "listSessions").mockResolvedValue([
       { id: "s1", device_label: "laptop", created_at: new Date().toISOString(), last_used_at: null, expires_at: new Date().toISOString() },

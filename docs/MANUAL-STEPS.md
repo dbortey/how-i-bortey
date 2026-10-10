@@ -27,7 +27,8 @@ Living checklist. I can't click dashboards, use BotFather, or receive your secre
 - ⬜ (recommended) Since an earlier token was shared in plaintext, consider rotating it in @BotFather and re-running: `wrangler secret put TELEGRAM_BOT_TOKEN` + `setWebhook` with the same secret.
 
 ## Email-to-capture (Plan 4)
-- ⬜ (verify) Send a test email to `capture@switgh.com` and confirm the routing rule action is **Send to a Worker → how-i-bortey**. As of last check **0 email entries** had landed.
+- ✅ Verified end-to-end — an email to `capture@switgh.com` created an `inbox` entry (`source: email`).
+- (Optional) Add other custom addresses in Email Routing (e.g. `help@` → forward to your Gmail); routing rules are per-address and independent of capture.
 
 ## Media serving (R2, Plan 4)
 - ✅ Decided: served by the **Worker route** `GET /media/:id` (session-protected, same-origin). No dashboard step, no public bucket needed. Already live.

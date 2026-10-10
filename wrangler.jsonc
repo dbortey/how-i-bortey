@@ -2,6 +2,9 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "how-i-bortey",
   "main": "src/index.ts",
+  "routes": [
+    { "pattern": "howibortey.switgh.com", "custom_domain": true }
+  ],
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },

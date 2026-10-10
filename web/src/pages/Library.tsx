@@ -13,6 +13,14 @@ import {
 
 const ALL = "all";
 
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
 export function Library() {
   const [params, setParams] = useSearchParams();
   const urlQuery = params.get("q") ?? "";
@@ -88,27 +96,71 @@ export function Library() {
 
       {data && data.length > 0 && (
         <ul className="border-t border-border">
-          {data.map((e) => (
-            <li key={e.id} className="border-b border-border">
-              <Link
-                to={`/library/${e.id}`}
-                className="flex flex-col gap-1 py-3.5 transition-colors hover:bg-accent/60 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-1"
-              >
-                <span className="truncate text-[15px] font-medium tracking-tight">{e.title}</span>
-                <span className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                  <span>{e.kind}</span>
-                  <span aria-hidden>·</span>
-                  <span>{e.status}</span>
-                  {e.tags.length > 0 && (
-                    <>
+          {data.map((e) => {
+            const media = e.media ?? [];
+            const relations = e.relations ?? [];
+            const links = e.links ?? [];
+            const hasDetails = media.length + relations.length + links.length > 0;
+            return (
+              <li key={e.id} className="border-b border-border">
+                <Link
+                  to={`/library/${e.id}`}
+                  className="grid gap-4 py-3.5 transition-colors hover:bg-accent/60 md:min-h-[76px] md:grid-cols-[3fr_2fr] md:items-center md:px-1"
+                >
+                  <div className="min-w-0">
+                    <span className="block truncate text-[15px] font-medium tracking-tight">{e.title}</span>
+                    <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      <span>{e.kind}</span>
                       <span aria-hidden>·</span>
-                      <span className="text-muted-foreground/70">{e.tags.join(" ")}</span>
-                    </>
+                      <span>{e.status}</span>
+                      {e.tags.length > 0 && (
+                        <span className="text-muted-foreground/70">{e.tags.join(" ")}</span>
+                      )}
+                    </span>
+                  </div>
+
+                  {hasDetails && (
+                    <div className="flex flex-col gap-2 md:col-start-2 md:border-l md:border-border md:pl-5">
+                      {media.length > 0 && (
+                        <div className="flex gap-1.5">
+                          {media.slice(0, 3).map((m) => (
+                            <img
+                              key={m.id}
+                              src={`/media/${m.id}`}
+                              alt=""
+                              className="h-10 w-10 border border-border object-cover"
+                            />
+                          ))}
+                          {media.length > 3 && (
+                            <span className="self-end font-mono text-[10px] text-muted-foreground">
+                              +{media.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {relations.length > 0 && (
+                        <p className="truncate font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                          <span className="text-foreground/50">alternatives </span>
+                          {relations
+                            .map(
+                              (r) =>
+                                `${r.related?.title ?? "?"}${r.verdict ? ` (${r.verdict})` : ""}`,
+                            )
+                            .join(", ")}
+                        </p>
+                      )}
+                      {links.length > 0 && (
+                        <p className="truncate font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                          <span className="text-foreground/50">links </span>
+                          {links.map((l) => l.title || hostOf(l.url)).join(", ")}
+                        </p>
+                      )}
+                    </div>
                   )}
-                </span>
-              </Link>
-            </li>
-          ))}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

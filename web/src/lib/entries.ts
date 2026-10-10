@@ -1,6 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
 
+export interface EntryLink {
+  id: string;
+  url: string;
+  title: string | null;
+  kind: string | null;
+  note: string | null;
+}
+
+export interface EntryRelation {
+  id: string;
+  type: string;
+  verdict: string | null;
+  reason: string | null;
+  related: { id: string; title: string; kind: string; status: string; verdict: string | null } | null;
+}
+
+export interface EntryMedia {
+  id: string;
+  mime: string | null;
+}
+
 export interface Entry {
   id: string;
   title: string;
@@ -11,7 +32,9 @@ export interface Entry {
   source_url: string | null;
   attributes: Record<string, unknown>;
   tags: string[];
-  media?: Array<{ id: string; mime: string | null }>;
+  media?: EntryMedia[];
+  links?: EntryLink[];
+  relations?: EntryRelation[];
 }
 
 export function useEntries(query: string, filters: { status?: string; kind?: string } = {}) {

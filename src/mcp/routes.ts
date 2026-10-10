@@ -65,7 +65,7 @@ mcpRoutes.post("/", async (c) => {
       params.arguments && typeof params.arguments === "object"
         ? (params.arguments as Record<string, unknown>)
         : {};
-    const result = await callTool(c.env.DB, name, args);
+    const result = await callTool(c.env, name, args);
     return c.json({ jsonrpc: "2.0", id, result });
   }
 

@@ -4,6 +4,7 @@ import { searchEntries } from "../db/search";
 import { getRelations } from "../db/relations";
 import { getLinks } from "../db/links";
 import { listTags } from "../db/tags";
+import { maybeEmbed, type AiLike } from "../embeddings/ai";
 
 export interface ToolDefinition {
   name: string;
@@ -87,6 +88,7 @@ export const TOOLS: ToolDefinition[] = [
 async function searchLibrary(
   db: D1Database,
   args: Record<string, unknown>,
+  ai?: AiLike,
 ): Promise<ToolResult> {
   const query = typeof args.query === "string" ? args.query : "";
   if (!query.trim()) return fail("query is required");
@@ -96,7 +98,7 @@ async function searchLibrary(
     : undefined;
   const limit =
     typeof args.limit === "number" && args.limit > 0 ? Math.min(args.limit, 50) : 10;
-  const entries = await searchEntries(db, query, { kind, tags, limit });
+  const entries = await searchEntries(db, query, { kind, tags, limit, ai });
   const enriched = await Promise.all(
     entries.map(async (e) => ({ ...e, relations: await getRelations(db, e.id) })),
   );
@@ -119,7 +121,7 @@ async function getEntryTool(
 }
 
 async function addEntryTool(
-  db: D1Database,
+  env: Env,
   args: Record<string, unknown>,
 ): Promise<ToolResult> {
   const title = typeof args.title === "string" ? args.title.trim() : "";
@@ -134,7 +136,7 @@ async function addEntryTool(
       ? (args.attributes as Record<string, unknown>)
       : undefined;
   const source_url = typeof args.source_url === "string" ? args.source_url : undefined;
-  const entry = await createEntry(db, {
+  const entry = await createEntry(env.DB, {
     title,
     kind,
     body,
@@ -143,20 +145,21 @@ async function addEntryTool(
     source_url,
     source: "mcp",
   });
-  // TODO(task4): embed this entry once `env`/`ai` is threaded through callTool.
+  await maybeEmbed(env, entry.id);
   return text(entry);
 }
 
 export async function callTool(
-  db: D1Database,
+  env: Env,
   name: string,
   args: Record<string, unknown>,
 ): Promise<ToolResult> {
+  const ai = env.AI as unknown as AiLike | undefined;
   try {
-    if (name === "search_library") return await searchLibrary(db, args);
-    if (name === "get_entry") return await getEntryTool(db, args);
-    if (name === "add_entry") return await addEntryTool(db, args);
-    if (name === "list_tags") return text(await listTags(db));
+    if (name === "search_library") return await searchLibrary(env.DB, args, ai);
+    if (name === "get_entry") return await getEntryTool(env.DB, args);
+    if (name === "add_entry") return await addEntryTool(env, args);
+    if (name === "list_tags") return text(await listTags(env.DB));
     return fail(`unknown tool: ${name}`);
   } catch (e) {
     return fail(e instanceof Error ? e.message : "tool error");

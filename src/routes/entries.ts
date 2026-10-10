@@ -49,7 +49,12 @@ entryRoutes.get("/", async (c) => {
   const status = c.req.query("status") as EntryStatus | undefined;
   const kind = c.req.query("kind") as EntryKind | undefined;
   const entries = q
-    ? await searchEntries(c.env.DB, q, { status, kind, limit: 50 })
+    ? await searchEntries(c.env.DB, q, {
+        status,
+        kind,
+        limit: 50,
+        ai: c.env.AI as unknown as AiLike | undefined,
+      })
     : await listEntries(c.env.DB, { status, kind });
   const detailed = await Promise.all(
     entries.map(async (e) => ({

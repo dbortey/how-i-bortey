@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { authRoutes } from "./auth/routes";
 import { entryRoutes } from "./routes/entries";
+import { embeddingRoutes } from "./routes/embeddings";
 import { mediaRoutes } from "./routes/media";
 import { accessRoutes } from "./routes/access";
 import { mcpRoutes } from "./mcp/routes";
@@ -20,6 +21,7 @@ app.get("/health", (c) => c.json({ ok: true }));
 app.route("/auth", authRoutes);
 app.get("/me", requireSession, (c) => c.json({ userId: c.get("userId") }));
 app.route("/entries", entryRoutes);
+app.route("/embeddings", embeddingRoutes);
 app.route("/media", mediaRoutes);
 app.route("/access", accessRoutes);
 app.route("/mcp", mcpRoutes);

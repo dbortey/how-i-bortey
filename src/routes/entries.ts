@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import type { AppEnv } from "../middleware/auth";
 import { requireSession } from "../middleware/auth";
 import {
@@ -12,6 +12,8 @@ import { searchEntries } from "../db/search";
 import { createLink, deleteLink, getLinks } from "../db/links";
 import { createRelation, deleteRelation, getRelations } from "../db/relations";
 import { getMediaForEntry } from "../media/store";
+import { embedEntry, type AiLike } from "../embeddings/ai";
+import { deleteEmbedding } from "../embeddings/store";
 import type {
   CreateEntryInput,
   EntryKind,
@@ -24,6 +26,16 @@ entryRoutes.use("*", requireSession);
 
 const KINDS: EntryKind[] = ["tool", "workflow", "decision", "note"];
 const STATUSES: EntryStatus[] = ["inbox", "filed", "archived"];
+
+function scheduleEmbed(c: Context<AppEnv>, entryId: string): void {
+  if (!c.env.AI) return;
+  const ai = c.env.AI as unknown as AiLike;
+  c.executionCtx.waitUntil(
+    embedEntry(c.env.DB, ai, entryId).catch((err) =>
+      console.error("embed failed", err),
+    ),
+  );
+}
 
 function invalidTags(tags: unknown): boolean {
   return (
@@ -66,6 +78,7 @@ entryRoutes.post("/", async (c) => {
     ...body,
     title: body.title.trim(),
   } as CreateEntryInput);
+  scheduleEmbed(c, entry.id);
   return c.json(entry, 201);
 });
 
@@ -136,12 +149,15 @@ entryRoutes.patch("/:id", async (c) => {
   if (invalidTags(body.tags)) return c.json({ error: "invalid tags" }, 400);
   const existing = await getEntry(c.env.DB, c.req.param("id"));
   if (!existing) return c.json({ error: "not found" }, 404);
-  return c.json(await updateEntry(c.env.DB, existing.id, body));
+  const updated = await updateEntry(c.env.DB, existing.id, body);
+  scheduleEmbed(c, updated.id);
+  return c.json(updated);
 });
 
 entryRoutes.delete("/:id", async (c) => {
   const existing = await getEntry(c.env.DB, c.req.param("id"));
   if (!existing) return c.json({ error: "not found" }, 404);
   await deleteEntry(c.env.DB, existing.id);
+  await deleteEmbedding(c.env.DB, existing.id);
   return c.body(null, 204);
 });

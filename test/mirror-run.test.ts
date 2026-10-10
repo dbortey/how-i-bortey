@@ -38,8 +38,8 @@ function fromBase64(s: string): string {
 }
 
 describe("mirror run", () => {
-  beforeEach(() => {
-    resetDb();
+  beforeEach(async () => {
+    await resetDb();
     vi.restoreAllMocks();
   });
 

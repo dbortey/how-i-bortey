@@ -67,7 +67,9 @@ export function renderEntryMarkdown(e: MirrorEntry): string {
 }
 
 export function renderIndex(entries: MirrorEntry[]): string {
-  const sorted = [...entries].sort((a, b) => (a.title < b.title ? -1 : 1));
+  const sorted = [...entries].sort((a, b) =>
+    a.title < b.title ? -1 : a.title > b.title ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0,
+  );
   const lines = ["# How I Bortey — Library", "", `${entries.length} entries.`, ""];
   for (const e of sorted) {
     lines.push(`- [${e.title}](${mirrorPath(e)})`);

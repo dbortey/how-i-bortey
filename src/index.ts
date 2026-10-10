@@ -37,7 +37,7 @@ export default {
     ctx.waitUntil(
       runMirror(env.DB, {
         repo: env.MIRROR_REPO ?? "",
-        branch: env.MIRROR_BRANCH ?? "main",
+        branch: env.MIRROR_BRANCH || "main",
         token: env.GITHUB_MIRROR_TOKEN ?? "",
       }).catch((err) => {
         console.error("mirror failed", err);

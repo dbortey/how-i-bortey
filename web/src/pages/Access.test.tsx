@@ -28,10 +28,39 @@ function stubReload() {
 describe("Access", () => {
   it("rebuilds the search index", async () => {
     vi.spyOn(api, "listSessions").mockResolvedValue([]);
-    const spy = vi.spyOn(api, "reindex").mockResolvedValue({ embedded: 3, total: 3 });
+    const spy = vi.spyOn(api, "reindex").mockResolvedValue({ embedded: 3, total: 3, failed: 0 });
     renderAccess();
     await userEvent.click(await screen.findByRole("button", { name: /rebuild search index/i }));
     expect(spy).toHaveBeenCalled();
+  });
+
+  it("shows a success toast with counts when entries embed", async () => {
+    vi.spyOn(api, "listSessions").mockResolvedValue([]);
+    vi.spyOn(api, "reindex").mockResolvedValue({ embedded: 3, total: 3, failed: 0 });
+    const successSpy = vi.spyOn(toast, "success");
+    renderAccess();
+    await userEvent.click(await screen.findByRole("button", { name: /rebuild search index/i }));
+    expect(successSpy).toHaveBeenCalledWith(expect.stringContaining("3/3"));
+  });
+
+  it("shows an error toast when nothing was embedded", async () => {
+    vi.spyOn(api, "listSessions").mockResolvedValue([]);
+    vi.spyOn(api, "reindex").mockResolvedValue({ embedded: 0, total: 2, failed: 2 });
+    const successSpy = vi.spyOn(toast, "success");
+    const errorSpy = vi.spyOn(toast, "error");
+    renderAccess();
+    await userEvent.click(await screen.findByRole("button", { name: /rebuild search index/i }));
+    expect(errorSpy).toHaveBeenCalled();
+    expect(successSpy).not.toHaveBeenCalled();
+  });
+
+  it("shows an error toast when reindex rejects", async () => {
+    vi.spyOn(api, "listSessions").mockResolvedValue([]);
+    vi.spyOn(api, "reindex").mockRejectedValue(new Error("502"));
+    const errorSpy = vi.spyOn(toast, "error");
+    renderAccess();
+    await userEvent.click(await screen.findByRole("button", { name: /rebuild search index/i }));
+    expect(errorSpy).toHaveBeenCalled();
   });
 
   it("lists sessions and mints a token", async () => {

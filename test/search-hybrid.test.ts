@@ -42,4 +42,16 @@ describe("hybrid search", () => {
     const results = await searchEntries(env.DB, "adobe", { ai: broken });
     expect(results.map((r) => r.title)).toContain("Lightroom");
   });
+
+  it("reserves budget for FTS so a keyword-only match is not starved", async () => {
+    const a = await createEntry(env.DB, { title: "Capture One", body: "raw image development" });
+    const b = await createEntry(env.DB, { title: "Darktable", body: "raw workflow editor" });
+    const vec = Float32Array.from({ length: 384 }, (_, i) => (i === 0 ? 1 : 0));
+    await putEmbedding(env.DB, a.id, vec, "m");
+    await putEmbedding(env.DB, b.id, vec, "m");
+    await createEntry(env.DB, { title: "Photo App", body: "keyword only match" });
+
+    const results = await searchEntries(env.DB, "photo", { ai: ai(), limit: 2 });
+    expect(results.map((r) => r.title)).toContain("Photo App");
+  });
 });

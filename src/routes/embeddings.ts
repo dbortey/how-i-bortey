@@ -11,5 +11,9 @@ embeddingRoutes.post("/backfill", async (c) => {
   const ai = c.env.AI as unknown as AiLike | undefined;
   if (!ai) return c.json({ error: "AI not configured" }, 400);
   const all = c.req.query("all") === "1";
-  return c.json(await backfillEmbeddings(c.env.DB, ai, { all }));
+  const result = await backfillEmbeddings(c.env.DB, ai, { all });
+  if (result.embedded === 0 && result.total > 0) {
+    return c.json({ error: "backfill failed", ...result }, 502);
+  }
+  return c.json(result);
 });

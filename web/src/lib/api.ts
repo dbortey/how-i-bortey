@@ -30,7 +30,10 @@ export const mintToken = (label: string) =>
   });
 export const revokeAll = () => api<{ revoked: number }>("/access/revoke-all", { method: "POST" });
 
-export const reindex = () => api<{ embedded: number; total: number }>("/embeddings/backfill", { method: "POST" });
+export const reindex = () =>
+  api<{ embedded: number; total: number; failed: number }>("/embeddings/backfill", {
+    method: "POST",
+  });
 
 export const getMe = () => api<{ userId: string }>("/me");
 export const requestMagicLink = (email: string) =>

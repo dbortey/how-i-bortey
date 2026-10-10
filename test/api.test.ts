@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { env, SELF } from "cloudflare:test";
 import { resetDb } from "./reset";
 import { upsertUserByEmail, createSession } from "../src/auth/sessions";
+import { putEmbedding, getEmbedding } from "../src/embeddings/store";
 
 beforeEach(resetDb);
 
@@ -45,6 +46,30 @@ describe("entry API", () => {
       headers: { cookie },
     });
     expect(del.status).toBe(204);
+  });
+
+  it("removes the embedding when an entry is deleted", async () => {
+    const cookie = await authCookie();
+    const created = await SELF.fetch("https://example.com/entries", {
+      method: "POST",
+      headers: { cookie, "content-type": "application/json" },
+      body: JSON.stringify({ title: "Capture One" }),
+    });
+    const entry = await created.json<{ id: string }>();
+    await putEmbedding(
+      env.DB,
+      entry.id,
+      Float32Array.from({ length: 384 }, () => 0.1),
+      "m",
+    );
+    expect(await getEmbedding(env.DB, entry.id)).not.toBeNull();
+
+    const del = await SELF.fetch(`https://example.com/entries/${entry.id}`, {
+      method: "DELETE",
+      headers: { cookie },
+    });
+    expect(del.status).toBe(204);
+    expect(await getEmbedding(env.DB, entry.id)).toBeNull();
   });
 
   it("validates the create body", async () => {

@@ -23,8 +23,11 @@ export function Access() {
 
   const reindex = useMutation({
     mutationFn: () => apiReindex(),
-    onSuccess: (r) => toast.success(`Index rebuilt (${r.embedded}/${r.total}).`),
-    onError: () => toast.error("Could not rebuild the index."),
+    onSuccess: (r) => {
+      if (r.embedded > 0) toast.success(`Index rebuilt (${r.embedded}/${r.total}).`);
+      else toast.error("Index rebuild failed — nothing was embedded.");
+    },
+    onError: () => toast.error("Index rebuild failed — nothing was embedded."),
   });
 
   async function killSwitch() {

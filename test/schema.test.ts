@@ -5,6 +5,7 @@ describe("schema", () => {
   it("creates every table", async () => {
     const expected = [
       "entries",
+      "entry_embeddings",
       "entry_relations",
       "entry_tags",
       "links",

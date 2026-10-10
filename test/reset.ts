@@ -3,6 +3,7 @@ import { env } from "cloudflare:test";
 export async function resetDb(): Promise<void> {
   await env.DB.batch([
     env.DB.prepare("DELETE FROM entries_fts"),
+    env.DB.prepare("DELETE FROM entry_embeddings"),
     env.DB.prepare("DELETE FROM entry_relations"),
     env.DB.prepare("DELETE FROM entry_tags"),
     env.DB.prepare("DELETE FROM links"),

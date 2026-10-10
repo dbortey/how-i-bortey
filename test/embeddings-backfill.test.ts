@@ -35,11 +35,20 @@ describe("backfillEmbeddings", () => {
     await createEntry(env.DB, { title: "B" });
 
     const first = await backfillEmbeddings(env.DB, fakeAi());
-    expect(first).toEqual({ embedded: 2, total: 2 });
+    expect(first).toEqual({ embedded: 2, total: 2, failed: 0 });
     expect(await getEmbedding(env.DB, a.id)).not.toBeNull();
 
     const second = await backfillEmbeddings(env.DB, fakeAi());
-    expect(second).toEqual({ embedded: 0, total: 2 });
+    expect(second).toEqual({ embedded: 0, total: 2, failed: 0 });
+  });
+
+  it("counts failures when every embed throws", async () => {
+    await createEntry(env.DB, { title: "A" });
+    await createEntry(env.DB, { title: "B" });
+    const broken: AiLike = { run: async () => { throw new Error("ai down"); } };
+
+    const res = await backfillEmbeddings(env.DB, broken);
+    expect(res).toEqual({ embedded: 0, total: 2, failed: 2 });
   });
 
   it("skips entries that already have an embedding", async () => {
@@ -53,7 +62,7 @@ describe("backfillEmbeddings", () => {
     );
 
     const res = await backfillEmbeddings(env.DB, fakeAi());
-    expect(res).toEqual({ embedded: 1, total: 2 });
+    expect(res).toEqual({ embedded: 1, total: 2, failed: 0 });
     expect(await getEmbedding(env.DB, b.id)).not.toBeNull();
   });
 
@@ -67,7 +76,7 @@ describe("backfillEmbeddings", () => {
     );
 
     const res = await backfillEmbeddings(env.DB, fakeAi(), { all: true });
-    expect(res).toEqual({ embedded: 1, total: 1 });
+    expect(res).toEqual({ embedded: 1, total: 1, failed: 0 });
   });
 });
 
@@ -88,5 +97,34 @@ describe("POST /embeddings/backfill", () => {
     );
     expect(res.status).toBe(400);
     expect((await res.json<{ error: string }>()).error).toBe("AI not configured");
+  });
+
+  it("returns 502 when nothing embeds", async () => {
+    const c = await cookie();
+    await createEntry(env.DB, { title: "A" });
+    const broken: AiLike = { run: async () => { throw new Error("ai down"); } };
+    const res = await embeddingRoutes.request(
+      "https://example.com/backfill",
+      { method: "POST", headers: { cookie: c } },
+      { DB: env.DB, AI: broken } as unknown as Env,
+    );
+    expect(res.status).toBe(502);
+    expect(await res.json<{ error: string; embedded: number; total: number; failed: number }>())
+      .toMatchObject({ error: "backfill failed", embedded: 0, total: 1, failed: 1 });
+  });
+
+  it("returns 200 and counts when some embed", async () => {
+    const c = await cookie();
+    await createEntry(env.DB, { title: "A" });
+    const res = await embeddingRoutes.request(
+      "https://example.com/backfill",
+      { method: "POST", headers: { cookie: c } },
+      { DB: env.DB, AI: fakeAi() } as unknown as Env,
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json<{ embedded: number; total: number }>()).toMatchObject({
+      embedded: 1,
+      total: 1,
+    });
   });
 });

@@ -71,29 +71,42 @@ export async function searchEntries(
   opts: SearchOptions = {},
 ): Promise<Entry[]> {
   const limit = Math.min(opts.limit ?? 25, 100);
+  const ftsReserve = Math.max(1, Math.floor(limit / 2));
+  const semCap = Math.max(1, limit - ftsReserve);
   const out: Entry[] = [];
   const seen = new Set<string>();
 
+  let semantic: Entry[] = [];
   if (opts.ai && query.trim()) {
     try {
-      for (const e of await semanticMatches(db, query, opts.ai, limit)) {
-        if (out.length >= limit) break;
-        if (!seen.has(e.id) && passes(e, opts)) {
-          seen.add(e.id);
-          out.push(e);
-        }
-      }
+      semantic = await semanticMatches(db, query, opts.ai, limit);
     } catch {
       // fall back to FTS only
     }
   }
 
+  const take = (e: Entry) => {
+    if (seen.has(e.id) || !passes(e, opts)) return false;
+    seen.add(e.id);
+    out.push(e);
+    return true;
+  };
+
+  // Semantic-first, but only up to the cap so FTS keeps a reserved budget.
+  for (const e of semantic) {
+    if (out.length >= semCap) break;
+    take(e);
+  }
+
   for (const e of await ftsMatches(db, query, limit * 4)) {
     if (out.length >= limit) break;
-    if (!seen.has(e.id) && passes(e, opts)) {
-      seen.add(e.id);
-      out.push(e);
-    }
+    take(e);
+  }
+
+  // Top up with any semantic matches the FTS reserve displaced.
+  for (const e of semantic) {
+    if (out.length >= limit) break;
+    take(e);
   }
   return out;
 }

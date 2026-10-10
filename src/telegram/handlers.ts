@@ -1,5 +1,6 @@
 import { createEntry } from "../db/entries";
 import { putMedia } from "../media/store";
+import { maybeEmbed } from "../embeddings/ai";
 
 interface TgMessage {
   message_id?: number;
@@ -52,12 +53,13 @@ export async function handleUpdate(env: Env, update: Record<string, unknown>): P
 
   if (typeof message.text === "string" && message.text.trim() && typeof chatId === "number") {
     const [firstLine, ...rest] = message.text.trim().split("\n");
-    await createEntry(env.DB, {
+    const entry = await createEntry(env.DB, {
       title: firstLine.slice(0, 120),
       body: rest.join("\n").trim(),
       source: "telegram",
       status: "inbox",
     });
+    await maybeEmbed(env, entry.id);
     await sendMessage(env, chatId, `Saved: ${firstLine.slice(0, 120)}`);
     return;
   }
@@ -71,6 +73,7 @@ export async function handleUpdate(env: Env, update: Record<string, unknown>): P
       source: "telegram",
       status: "inbox",
     });
+    await maybeEmbed(env, entry.id);
     if (largest.file_id) {
       const bytes = await downloadFile(env, largest.file_id);
       if (bytes) {

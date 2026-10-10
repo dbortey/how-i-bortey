@@ -143,6 +143,7 @@ async function addEntryTool(
     source_url,
     source: "mcp",
   });
+  // TODO(task4): embed this entry once `env`/`ai` is threaded through callTool.
   return text(entry);
 }
 

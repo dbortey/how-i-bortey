@@ -24,3 +24,12 @@ export async function embedEntry(db: D1Database, ai: AiLike, entryId: string): P
   await putEmbedding(db, entryId, vector, EMBEDDING_MODEL);
   return true;
 }
+
+export async function maybeEmbed(env: Env, entryId: string): Promise<void> {
+  if (!env.AI) return;
+  try {
+    await embedEntry(env.DB, env.AI as unknown as AiLike, entryId);
+  } catch (err) {
+    console.error("embed failed", entryId, err);
+  }
+}

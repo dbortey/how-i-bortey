@@ -10,8 +10,8 @@ export async function backfillEmbeddings(
   const entries = await listEntries(db, { limit: 200 });
   let embedded = 0;
   for (const e of entries) {
-    if (!opts.all && (await getEmbedding(db, e.id))) continue;
     try {
+      if (!opts.all && (await getEmbedding(db, e.id))) continue;
       if (await embedEntry(db, ai, e.id)) embedded += 1;
     } catch (err) {
       console.error("embed failed", e.id, err);

@@ -158,6 +158,10 @@ entryRoutes.delete("/:id", async (c) => {
   const existing = await getEntry(c.env.DB, c.req.param("id"));
   if (!existing) return c.json({ error: "not found" }, 404);
   await deleteEntry(c.env.DB, existing.id);
-  await deleteEmbedding(c.env.DB, existing.id);
+  try {
+    await deleteEmbedding(c.env.DB, existing.id);
+  } catch (err) {
+    console.error("embed delete failed", existing.id, err);
+  }
   return c.body(null, 204);
 });

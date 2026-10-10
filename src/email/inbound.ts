@@ -1,5 +1,6 @@
 import PostalMime from "postal-mime";
 import { createEntry } from "../db/entries";
+import { maybeEmbed } from "../embeddings/ai";
 
 export interface InboundMessage {
   from: string;
@@ -41,11 +42,12 @@ export async function handleInboundEmail(message: InboundMessage, env: Env): Pro
   const firstLine = text.split("\n")[0]?.trim() ?? "";
   const title = (subject || firstLine || "Email note").slice(0, 120);
   const url = firstUrl(text);
-  await createEntry(env.DB, {
+  const entry = await createEntry(env.DB, {
     title,
     body: text,
     source: "email",
     status: "inbox",
     source_url: url,
   });
+  await maybeEmbed(env, entry.id);
 }

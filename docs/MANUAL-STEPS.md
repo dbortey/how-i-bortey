@@ -39,6 +39,10 @@ Living checklist. I can't click dashboards, use BotFather, or receive your secre
 - ⬜ (verify) Send the Telegram bot a **photo**; I'll confirm the stored media is `image/webp` and ≤150KB.
 
 ## Plan 5 (mirror + instruction file)
-- ⬜ Create a **private** repo for the Markdown mirror (e.g. `how-i-bortey-library`).
-- ⬜ Create a GitHub **fine-grained PAT** (Contents: read & write) scoped to that repo → `npx wrangler secret put GITHUB_MIRROR_TOKEN`.
-- ⬜ Tell me the mirror repo name so I can wire the Cron export.
+- ✅ **Instruction file** shipped at `agent/how-i-bortey.md` — paste it into any AI's custom instructions.
+- ✅ **Client connect sheet** shipped at `docs/MCP-CLIENT-SETUP.md` (Claude, ChatGPT, Cursor/VS Code, Gemini CLI, `mcp-remote` bridge).
+- ✅ **Mirror code** shipped (`scheduled()` + Cron Trigger `0 3 * * *`). It's a **no-op until configured**.
+- ⬜ Create a **private** repo for the Markdown mirror (e.g. `dbortey/how-i-bortey-library`).
+- ⬜ Create a GitHub **fine-grained PAT** (Contents: read & write) scoped to that repo, then run:
+  `npx wrangler secret put GITHUB_MIRROR_TOKEN`
+- ⬜ Tell me the repo name (`owner/repo`) so I set the `MIRROR_REPO` var and redeploy — the nightly run then mirrors the library.

@@ -22,16 +22,9 @@ Living checklist. I can't click dashboards, use BotFather, or receive your secre
 - Note: a sign-in link was emailed to you on deploy day; nothing is captured until you (or later, an MCP client) act on it.
 
 ## Telegram (Plan 4)
-Status as of last check: **Worker secrets empty** (`wrangler secret list` → `[]`) and **no webhook registered** (`getWebhookInfo` → `"url":""`). Do these in order:
-- ⬜ **Rotate the token** (a token was shared in plaintext): @BotFather → `/mybots` → your bot → API Token → **Revoke**, copy the new token.
-- ⬜ `npx wrangler secret put TELEGRAM_BOT_TOKEN` (paste the new token)
-- ⬜ `npx wrangler secret put TELEGRAM_WEBHOOK_SECRET` (type any long random string — you'll reuse it next)
-- ⬜ Register the webhook (replace `<TOKEN>` and `<SECRET>`; same secret as above):
-  ```
-  curl "https://api.telegram.org/bot<TOKEN>/setWebhook" -d "url=https://howibortey.switgh.com/telegram/webhook" -d "secret_token=<SECRET>"
-  ```
-  Expect `{"ok":true,...,"description":"Webhook was set"}`.
-- ⬜ Message your bot; I'll re-check the DB.
+- ✅ Bot token + webhook secret set on the Worker; webhook registered; **verified end-to-end** — a text message created an `inbox` entry (`source: telegram`) and the bot replied "Saved: …".
+- ⬜ (optional) Send the bot a **photo** to exercise the R2 media path (media count is still 0).
+- ⬜ (recommended) Since an earlier token was shared in plaintext, consider rotating it in @BotFather and re-running: `wrangler secret put TELEGRAM_BOT_TOKEN` + `setWebhook` with the same secret.
 
 ## Email-to-capture (Plan 4)
 - ⬜ (verify) Send a test email to `capture@switgh.com` and confirm the routing rule action is **Send to a Worker → how-i-bortey**. As of last check **0 email entries** had landed.
